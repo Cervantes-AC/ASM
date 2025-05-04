@@ -9,15 +9,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
     $password_confirm = $_POST['password_confirm'] ?? '';
-    $role = $_POST['role'] ?? 'member';
 
     // Basic validation
     if (empty($username) || empty($password) || empty($password_confirm)) {
         $error = 'All fields are required.';
     } elseif ($password !== $password_confirm) {
         $error = 'Passwords do not match.';
-    } elseif (!in_array($role, ['admin', 'staff', 'member'])) {
-        $error = 'Invalid role selected.';
     } else {
         // Check if username already exists
         $stmt = $pdo->prepare("SELECT user_id FROM users WHERE username = ?");
@@ -25,10 +22,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($stmt->fetch()) {
             $error = 'Username already exists.';
         } else {
-            // Hash the password and insert the new user
+            // Hash the password and insert the new user as a member
             $password_hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$username, $password_hash, '', $role]); // Assuming full_name is optional
+            $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, full_name, role) VALUES (?, ?, ?, 'member')");
+            $stmt->execute([$username, $password_hash, '']); // Assuming full_name is optional
             $success = 'Registration successful, you can now <a href="login.php">login</a>.';
         }
     }
@@ -51,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .error {color: red; margin-bottom: 10px;}
         .success {color: green; margin-bottom: 10px;}
         label {display: block; margin: 10px 0 5px;}
-        input, select {width: 100%; padding: 8px; box-sizing: border-box;}
+        input {width: 100%; padding: 8px; box-sizing: border-box;}
         button {width: 100%; margin-top: 15px;}
     </style>
 </head>
@@ -74,15 +71,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <label for="password_confirm">Confirm Password</label>
         <input type="password" id="password_confirm" name="password_confirm" required />
 
-        <label for="role">Role</label>
-        <select id="role" name="role" required>
-            <option value="member">Member</option>
-            <option value="staff">Staff</option>
-            <option value="admin">Administrator</option>
-        </select>
-
         <button type="submit">Register</button>
     </form>
     <p style="margin-top: 15px;">Already have an account? <a href="login.php">Login here</a></p>
 </div>
-</
+</body>
+</html>

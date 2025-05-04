@@ -3,7 +3,7 @@ require_once '../includes/auth_check.php';
 require_once '../config/db.php';
 
 // Only allow admin access
-if ($_SESSION['role'] !== 'admin') {
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     header('Location: ../index.php');
     exit();
 }
@@ -34,6 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['save'])) {
         // Save or update user details
         $username = trim($_POST['username'] ?? '');
+        $full_name = trim($_POST['full_name'] ?? '');
+        $email = trim($_POST['email'] ?? '');
         $role = $_POST['role'] ?? 'member';
         $password = $_POST['password'] ?? '';
         $password_confirm = $_POST['password_confirm'] ?? '';
@@ -41,28 +43,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Validate inputs
         if (empty($username)) {
             $error = 'Username is required.';
-        } elseif (!in_array($role, ['admin', 'staff', 'member'])) {
+        } elseif (empty($full_name)) {
+            $error = 'Full name is required.';
+        } elseif (empty($email)) {
+            $error = 'Email is required.';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error = 'Invalid email format.';
+        } elseif (!in_array($role, ['admin', 'member'])) {
             $error = 'Invalid role selected.';
         } elseif ($id === null && (empty($password) || empty($password_confirm))) {
             $error = 'Password and confirm password are required for new users.';
         } elseif ($password !== $password_confirm) {
             $error = 'Passwords do not match.';
         } else {
-            // Check for duplicate username excluding current user if editing
-            $stmt = $pdo->prepare('SELECT user_id FROM users WHERE username = ? AND user_id != ?');
-            $stmt->execute([$username, $id ?: 0]);
+            // Check for duplicate username and email excluding current user if editing
+            $stmt = $pdo->prepare('SELECT user_id FROM users WHERE (username = ? OR email = ?) AND user_id != ?');
+            $stmt->execute([$username, $email, $id ?: 0]);
             if ($stmt->fetch()) {
-                $error = 'Username already exists.';
+                $error = 'Username or email already exists.';
             } else {
                 if ($id) {
                     // Update existing user
                     if (!empty($password)) {
                         $password_hash = password_hash($password, PASSWORD_DEFAULT);
-                        $stmt = $pdo->prepare('UPDATE users SET username = ?, role = ?, password_hash = ? WHERE user_id = ?');
-                        $stmt->execute([$username, $role, $password_hash, $id]);
+                        $stmt = $pdo->prepare('UPDATE users SET username = ?, full_name = ?, email = ?, role = ?, password_hash = ? WHERE user_id = ?');
+                        $stmt->execute([$username, $full_name, $email, $role, $password_hash, $id]);
                     } else {
-                        $stmt = $pdo->prepare('UPDATE users SET username = ?, role = ? WHERE user_id = ?');
-                        $stmt->execute([$username, $role, $id]);
+                        $stmt = $pdo->prepare('UPDATE users SET username = ?, full_name = ?, email = ?, role = ? WHERE user_id = ?');
+                        $stmt->execute([$username, $full_name, $email, $role, $id]);
                     }
                     $success = 'User updated successfully.';
                     // Refresh user data after update
@@ -72,8 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     // Insert new user
                     $password_hash = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)');
-                    $stmt->execute([$username, $password_hash, $role]);
+                    $stmt = $pdo->prepare('INSERT INTO users (username, full_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)');
+                    $stmt->execute([$username, $full_name, $email, $password_hash, $role]);
                     $success = 'User created successfully.';
                     header('Location: list.php');
                     exit();
@@ -109,6 +117,26 @@ include '../includes/navbar.php';
             style="width: 100%; padding: 8px; margin-bottom: 10px;"
         />
 
+        <label for="full_name">Full Name *</label>
+        <input 
+            type="text" 
+            id="full_name" 
+            name="full_name" 
+            required 
+            value="<?= htmlspecialchars($_POST['full_name'] ?? $user['full_name'] ?? '') ?>" 
+            style="width: 100%; padding: 8px; margin-bottom: 10px;"
+        />
+
+        <label for="email">Email *</label>
+        <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            required 
+            value="<?= htmlspecialchars($_POST['email'] ?? $user['email'] ?? '') ?>" 
+            style="width: 100%; padding: 8px; margin-bottom: 10px;"
+        />
+
         <label for="role">Role *</label>
         <select 
             id="role" 
@@ -117,7 +145,7 @@ include '../includes/navbar.php';
             style="width: 100%; padding: 8px; margin-bottom: 10px;"
         >
             <?php
-                $roles = ['admin', 'staff', 'member'];
+                $roles = ['admin', 'member'];
                 $selectedRole = $_POST['role'] ?? $user['role'] ?? 'member';
                 foreach ($roles as $roleOption) {
                     $selected = ($selectedRole === $roleOption) ? 'selected' : '';

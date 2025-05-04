@@ -8,16 +8,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    // Prepare and execute the SQL statement
+    // Prepare and execute the statement
     $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
     $stmt->execute([$username]);
     $user = $stmt->fetch();
 
     // Check if user exists and verify password
-    if ($user && password_verify($password, $user['password_hash'])) { // Use 'password_hash' instead of 'password'
-        $_SESSION['user_id'] = $user['user_id']; // Use 'user_id' instead of 'id'
-        $_SESSION['role'] = $user['role'];
-        header('Location: ../index.php');
+    if ($user && password_verify($password, $user['password_hash'])) {
+        $_SESSION['user_id'] = $user['user_id']; // Store user ID
+        $_SESSION['username'] = $user['username']; // Store username
+        $_SESSION['role'] = $user['role']; // Store user role
+        header('Location: ../index.php'); // Redirect to the dashboard
         exit();
     } else {
         $error = 'Invalid username or password.';

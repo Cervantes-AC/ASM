@@ -1,8 +1,6 @@
-
 -- STEP 2: Drop tables in reverse dependency order
-DROP TABLE IF EXISTS reservations;
-DROP TABLE IF EXISTS logs;
 DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS logs;
 DROP TABLE IF EXISTS fines;
 DROP TABLE IF EXISTS borrow_requests;
 DROP TABLE IF EXISTS assets;
@@ -15,7 +13,8 @@ CREATE TABLE users (
     username VARCHAR(50) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(100),
-    role ENUM('admin', 'staff', 'member') NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    role ENUM('admin', 'member') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -77,24 +76,22 @@ CREATE TABLE logs (
 
 -- STEP 4: Sample inserts (AFTER all tables are created)
 
-INSERT INTO users (username, password_hash, full_name, role) VALUES
-('admin01', SHA2('adminpass', 256), 'Aaron Clyde C. Cervantes', 'admin'),
-('staff01', SHA2('staffpass', 256), 'Christian Q. Endrina', 'staff'),
-('member01', SHA2('memberpass', 256), 'Earl Vinent N. Menguez', 'member');
+INSERT INTO users (username, password_hash, full_name, email, role) VALUES
+('admin01', SHA2('adminpass', 256), 'Admin User', 'admin@example.com', 'admin'),
+('member01', SHA2('memberpass', 256), 'Earl Vinent N. Menguez', 'earl@example.com', 'member');
 
 INSERT INTO assets (asset_name, asset_description, serial_number, status, date_acquired, value, location) VALUES
 ('Projector', 'Epson multimedia projector', 'SN-PRJ-001', 'available', '2023-01-15', 25000.00, 'Office A'),
 ('Laptop', 'HP ProBook for staff use', 'SN-LPT-002', 'available', '2022-08-10', 45000.00, 'Office B');
 
 INSERT INTO borrow_requests (user_id, asset_id, date_borrowed, due_date, status, notes)
-VALUES (3, 1, '2025-04-01', '2025-04-05', 'borrowed', 'Needed for student presentation');
+VALUES (2, 1, '2025-04-01', '2025-04-05', 'borrowed', 'Needed for student presentation');
 
 INSERT INTO fines (request_id, user_id, amount, reason, date_issued)
-VALUES (1, 3, 500.00, 'Late return of projector', '2025-04-10');
+VALUES (1, 2, 500.00, 'Late return of projector', '2025-04-10');
 
 INSERT INTO notifications (user_id, message, type)
-VALUES (3, 'Your borrowed asset "Projector" is overdue.', 'overdue');
+VALUES (2, 'Your borrowed asset "Projector" is overdue.', 'overdue');
 
 INSERT INTO logs (user_id, action, description)
 VALUES (1, 'Add Asset', 'Admin added new asset: Laptop');
-
