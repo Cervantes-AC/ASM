@@ -6,22 +6,22 @@ $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name'] ?? '');
-    $category = trim($_POST['category'] ?? '');
+    $asset_name = trim($_POST['name'] ?? '');
+    $asset_description = trim($_POST['description'] ?? ''); // Added description field
     $serial_number = trim($_POST['serial_number'] ?? '');
     $status = $_POST['status'] ?? 'available';
 
-    if (empty($name) || empty($category) || empty($serial_number)) {
+    if (empty($asset_name) || empty($serial_number)) {
         $error = 'Please fill in all required fields.';
     } else {
         // Check if serial_number already exists
-        $stmt = $pdo->prepare('SELECT id FROM assets WHERE serial_number = ?');
+        $stmt = $pdo->prepare('SELECT asset_id FROM assets WHERE serial_number = ?');
         $stmt->execute([$serial_number]);
         if ($stmt->fetch()) {
             $error = 'Asset with this Serial Number already exists.';
         } else {
-            $stmt = $pdo->prepare('INSERT INTO assets (name, category, serial_number, status) VALUES (?, ?, ?, ?)');
-            $stmt->execute([$name, $category, $serial_number, $status]);
+            $stmt = $pdo->prepare('INSERT INTO assets (asset_name, asset_description, serial_number, status) VALUES (?, ?, ?, ?)');
+            $stmt->execute([$asset_name, $asset_description, $serial_number, $status]);
             $success = 'Asset added successfully.';
             // Optionally redirect to list page
             header('Location: list.php');
@@ -40,8 +40,8 @@ include '../includes/navbar.php';
         <label for="name">Asset Name *</label>
         <input type="text" id="name" name="name" required value="<?= htmlspecialchars($_POST['name'] ?? '') ?>" />
 
-        <label for="category">Category *</label>
-        <input type="text" id="category" name="category" required value="<?= htmlspecialchars($_POST['category'] ?? '') ?>" />
+        <label for="description">Asset Description</label> <!-- Added description field -->
+        <textarea id="description" name="description"><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
 
         <label for="serial_number">Serial Number *</label>
         <input type="text" id="serial_number" name="serial_number" required value="<?= htmlspecialchars($_POST['serial_number'] ?? '') ?>" />
@@ -52,6 +52,7 @@ include '../includes/navbar.php';
             <option value="borrowed" <?= (($_POST['status'] ?? '') === 'borrowed') ? 'selected' : '' ?>>Borrowed</option>
             <option value="reserved" <?= (($_POST['status'] ?? '') === 'reserved') ? 'selected' : '' ?>>Reserved</option>
             <option value="missing" <?= (($_POST['status'] ?? '') === 'missing') ? 'selected' : '' ?>>Missing</option>
+            <option value="damaged" <?= (($_POST['status'] ?? '') === 'damaged') ? 'selected' : '' ?>>Damaged</option>
         </select>
 
         <button type="submit">Add Asset</button>

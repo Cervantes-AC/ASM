@@ -20,14 +20,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error = 'Invalid role selected.';
     } else {
         // Check if username already exists
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+        $stmt = $pdo->prepare("SELECT user_id FROM users WHERE username = ?");
         $stmt->execute([$username]);
         if ($stmt->fetch()) {
             $error = 'Username already exists.';
         } else {
+            // Hash the password and insert the new user
             $password_hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO users (username, password, role) VALUES (?, ?, ?)");
-            $stmt->execute([$username, $password_hash, $role]);
+            $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$username, $password_hash, '', $role]); // Assuming full_name is optional
             $success = 'Registration successful, you can now <a href="login.php">login</a>.';
         }
     }
@@ -84,5 +85,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </form>
     <p style="margin-top: 15px;">Already have an account? <a href="login.php">Login here</a></p>
 </div>
-</body>
-</html>
+</

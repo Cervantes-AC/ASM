@@ -2,12 +2,12 @@
 require_once '../includes/auth_check.php';
 require_once '../config/db.php';
 
+// Fetch log entries
 $stmt = $pdo->query(
-    "SELECT t.id, u.username, a.name, a.serial_number, t.action, t.transaction_date 
-     FROM transactions t
-     JOIN users u ON t.user_id = u.id
-     JOIN assets a ON t.asset_id = a.id
-     ORDER BY t.transaction_date DESC LIMIT 100"
+    "SELECT l.log_id, u.username, l.action, l.description, l.timestamp 
+     FROM logs l
+     JOIN users u ON l.user_id = u.user_id
+     ORDER BY l.timestamp DESC LIMIT 100"
 );
 $logs = $stmt->fetchAll();
 
@@ -22,19 +22,19 @@ include '../includes/navbar.php';
             <tr>
                 <th>Log ID</th>
                 <th>User</th>
-                <th>Asset</th>
                 <th>Action</th>
+                <th>Description</th>
                 <th>Date</th>
             </tr>
         </thead>
         <tbody>
             <?php foreach($logs as $log): ?>
             <tr>
-                <td><?= htmlspecialchars($log['id']) ?></td>
+                <td><?= htmlspecialchars($log['log_id']) ?></td>
                 <td><?= htmlspecialchars($log['username']) ?></td>
-                <td><?= htmlspecialchars($log['name']) ?></td>
                 <td><?= htmlspecialchars($log['action']) ?></td>
-                <td><?= htmlspecialchars($log['transaction_date']) ?></td>
+                <td><?= htmlspecialchars($log['description']) ?></td>
+                <td><?= htmlspecialchars($log['timestamp']) ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>

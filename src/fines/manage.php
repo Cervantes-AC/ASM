@@ -5,20 +5,20 @@ require_once '../config/db.php';
 $error = '';
 $success = '';
 
-// Fetch fines - assuming fines are logged as special transactions or separate table
-
-// For simplicity, this sample assumes fines stored as transactions with action 'fine'
+// Handle POST request to update fine status or payment
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // You can add logic to update fine status or payment
+    // Logic to update fine status or payment can be added here
+    // For example, you might want to mark a fine as paid
 }
 
+// Fetch fines
 $stmt = $pdo->query(
-    "SELECT t.id, u.username, a.name, a.serial_number, t.transaction_date, t.action
-     FROM transactions t
-     JOIN users u ON t.user_id = u.id
-     JOIN assets a ON t.asset_id = a.id
-     WHERE t.action LIKE 'fine%'
-     ORDER BY t.transaction_date DESC"
+    "SELECT f.fine_id, u.username, a.asset_name AS name, f.amount, f.reason, f.date_issued, f.is_paid
+     FROM fines f
+     JOIN users u ON f.user_id = u.user_id
+     JOIN borrow_requests br ON f.request_id = br.request_id
+     JOIN assets a ON br.asset_id = a.asset_id
+     ORDER BY f.date_issued DESC"
 );
 $fines = $stmt->fetchAll();
 
@@ -34,18 +34,22 @@ include '../includes/navbar.php';
                 <th>Fine ID</th>
                 <th>User</th>
                 <th>Asset</th>
-                <th>Date</th>
-                <th>Fine Type</th>
+                <th>Amount</th>
+                <th>Reason</th>
+                <th>Date Issued</th>
+                <th>Status</th>
             </tr>
         </thead>
         <tbody>
             <?php foreach($fines as $fine): ?>
             <tr>
-                <td><?= htmlspecialchars($fine['id']) ?></td>
+                <td><?= htmlspecialchars($fine['fine_id']) ?></td>
                 <td><?= htmlspecialchars($fine['username']) ?></td>
                 <td><?= htmlspecialchars($fine['name']) ?></td>
-                <td><?= htmlspecialchars($fine['transaction_date']) ?></td>
-                <td><?= htmlspecialchars($fine['action']) ?></td>
+                <td><?= htmlspecialchars($fine['amount']) ?></td>
+                <td><?= htmlspecialchars($fine['reason']) ?></td>
+                <td><?= htmlspecialchars($fine['date_issued']) ?></td>
+                <td><?= $fine['is_paid'] ? 'Paid' : 'Unpaid' ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>

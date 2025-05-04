@@ -75,16 +75,6 @@ CREATE TABLE logs (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE reservations (
-    reservation_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    asset_id INT NOT NULL,
-    reservation_date DATE,
-    status ENUM('pending', 'approved', 'cancelled') DEFAULT 'pending',
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (asset_id) REFERENCES assets(asset_id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
 -- STEP 4: Sample inserts (AFTER all tables are created)
 
 INSERT INTO users (username, password_hash, full_name, role) VALUES
@@ -108,5 +98,3 @@ VALUES (3, 'Your borrowed asset "Projector" is overdue.', 'overdue');
 INSERT INTO logs (user_id, action, description)
 VALUES (1, 'Add Asset', 'Admin added new asset: Laptop');
 
-INSERT INTO reservations (user_id, asset_id, reservation_date, status)
-VALUES (2, 2, '2025-05-01', 'approved');

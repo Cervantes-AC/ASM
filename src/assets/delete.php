@@ -2,11 +2,11 @@
 require_once '../includes/auth_check.php';
 require_once '../config/db.php';
 
-$id = $_GET['id'] ?? null;
+$asset_id = $_GET['id'] ?? null; // Renamed variable for clarity
 
-if ($id) {
-    $stmt = $pdo->prepare('DELETE FROM assets WHERE id = ?');
-    $stmt->execute([$id]);
+if ($asset_id) {
+    $stmt = $pdo->prepare('DELETE FROM assets WHERE asset_id = ?'); // Changed 'id' to 'asset_id'
+    $stmt->execute([$asset_id]);
 }
 
 header('Location: list.php');

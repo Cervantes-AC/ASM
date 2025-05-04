@@ -8,12 +8,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
 
+    // Prepare and execute the SQL statement
     $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
     $stmt->execute([$username]);
     $user = $stmt->fetch();
 
-    if ($user && password_verify($password, $user['password'])) {
-        $_SESSION['user_id'] = $user['id'];
+    // Check if user exists and verify password
+    if ($user && password_verify($password, $user['password_hash'])) { // Use 'password_hash' instead of 'password'
+        $_SESSION['user_id'] = $user['user_id']; // Use 'user_id' instead of 'id'
         $_SESSION['role'] = $user['role'];
         header('Location: ../index.php');
         exit();
