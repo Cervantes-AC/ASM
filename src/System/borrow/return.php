@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $updateTran->execute([$transaction_id]);
 
             // Update asset status to available
-            $updateAsset = $pdo->prepare('UPDATE assets SET status = "available" WHERE id = ?');
+            $updateAsset = $pdo->prepare('UPDATE assets SET status = "available" WHERE asset_id = ?');
             $updateAsset->execute([$transaction['asset_id']]);
 
             $pdo->commit();
@@ -38,9 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Fetch borrowed assets for user (not returned)
 $stmt = $pdo->prepare(
-    'SELECT t.id as transaction_id, a.name, a.serial_number, t.due_date
+    'SELECT t.id as transaction_id, a.asset_name as name, a.serial_number, t.due_date
      FROM transactions t
-     JOIN assets a ON t.asset_id = a.id
+     JOIN assets a ON t.asset_id = a.asset_id
      WHERE t.user_id = ? AND t.returned = 0 AND t.action = "borrow"'
 );
 $stmt->execute([$userId]);
@@ -51,22 +51,26 @@ include '../includes/navbar.php';
 ?>
 <div class="container">
     <h2>Return Borrowed Assets</h2>
-    <?php if ($error): ?><div class="error"><?= htmlspecialchars($error) ?></div><?php endif; ?>
-    <?php if ($success): ?><div class="success"><?= htmlspecialchars($success) ?></div><?php endif; ?>
+    <?php if ($error): ?>
+        <div class="error"><?= htmlspecialchars($error) ?></div>
+    <?php endif; ?>
+    <?php if ($success): ?>
+        <div class="success"><?= htmlspecialchars($success) ?></div>
+    <?php endif; ?>
 
     <?php if ($borrowedAssets): ?>
-    <form method="post" action="">
-        <label for="transaction_id">Select asset to return *</label>
-        <select name="transaction_id" id="transaction_id" required>
-            <option value="">-- Select --</option>
-            <?php foreach($borrowedAssets as $asset): ?>
-                <option value="<?= $asset['transaction_id'] ?>">
-                    <?= htmlspecialchars($asset['name'] . ' (' . $asset['serial_number'] . ') - Due: ' . $asset['due_date']) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-        <button type="submit">Return Asset</button>
-    </form>
+        <form method="post" action="">
+            <label for="transaction_id">Select asset to return *</label>
+            <select name="transaction_id" id="transaction_id" required>
+                <option value="">-- Select --</option>
+                <?php foreach($borrowedAssets as $asset): ?>
+                    <option value="<?= $asset['transaction_id'] ?>">
+                        <?= htmlspecialchars($asset['name'] . ' (' . $asset['serial_number'] . ') - Due: ' . $asset['due_date']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <button type="submit">Return Asset</button>
+        </form>
     <?php else: ?>
         <p>You have no borrowed assets to return.</p>
     <?php endif; ?>

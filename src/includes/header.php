@@ -30,6 +30,3 @@
     </style>
 </head>
 <body>
-<header>
-    <h1>Asset Management System</h1>
-</header>

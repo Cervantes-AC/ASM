@@ -43,6 +43,17 @@ CREATE TABLE borrow_requests (
     FOREIGN KEY (asset_id) REFERENCES assets(asset_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE TABLE transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    asset_id INT NOT NULL,
+    due_date DATE NOT NULL,
+    returned TINYINT(1) DEFAULT 0,
+    action ENUM('borrow', 'return') NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (asset_id) REFERENCES assets(asset_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE fines (
     fine_id INT AUTO_INCREMENT PRIMARY KEY,
     request_id INT NOT NULL,
