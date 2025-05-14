@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/auth_check.php';
+require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
 $user_id = $_SESSION['user_id'];

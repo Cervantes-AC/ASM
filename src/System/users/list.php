@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/auth_check.php';
+require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
 // Only admin access
@@ -11,8 +11,8 @@ if ($_SESSION['role'] !== 'admin') {
 $stmt = $pdo->query("SELECT * FROM users ORDER BY created_at DESC");
 $users = $stmt->fetchAll();
 
-include '../includes/header.php';
-include '../includes/navbar.php';
+include '../../includes/header.php';
+include '../../includes/navbar.php';
 ?>
 <div class="container">
     <h2>User List</h2>
@@ -41,5 +41,5 @@ include '../includes/navbar.php';
     </table>
 </div>
 <?php
-include '../includes/footer.php';
+include '../../includes/footer.php';
 ?>

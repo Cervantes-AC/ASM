@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/auth_check.php';
+require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
 // Fetch log entries
@@ -11,8 +11,8 @@ $stmt = $pdo->query(
 );
 $logs = $stmt->fetchAll();
 
-include '../includes/header.php';
-include '../includes/navbar.php';
+include '../../includes/header.php';
+include '../../includes/navbar.php';
 ?>
 <div class="container">
     <h2>Transaction Logs</h2>
@@ -44,5 +44,5 @@ include '../includes/navbar.php';
     <?php endif; ?>
 </div>
 <?php
-include '../includes/footer.php';
+include '../../includes/footer.php';
 ?>

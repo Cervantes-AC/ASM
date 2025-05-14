@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/auth_check.php';
+require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
 $error = '';
@@ -30,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-include '../includes/header.php';
-include '../includes/navbar.php';
+include '../../includes/header.php';
+include '../../includes/navbar.php';
 ?>
 <div class="container">
     <h2>Add New Asset</h2>
@@ -60,5 +60,5 @@ include '../includes/navbar.php';
     <a href="list.php">Back to Assets List</a>
 </div>
 <?php
-include '../includes/footer.php';
+include '../../includes/footer.php';
 ?>

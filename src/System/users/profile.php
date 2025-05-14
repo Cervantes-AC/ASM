@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/auth_check.php';
+require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
 $userId = $_SESSION['user_id'];
@@ -9,8 +9,8 @@ $stmt = $pdo->prepare('SELECT * FROM users WHERE id = ?');
 $stmt->execute([$userId]);
 $user = $stmt->fetch();
 
-include '../includes/header.php';
-include '../includes/navbar.php';
+include '../../includes/header.php';
+include '../../includes/navbar.php';
 ?>
 <div class="container">
     <h2>My Profile</h2>
@@ -20,5 +20,5 @@ include '../includes/navbar.php';
     <a href="manage.php">Manage Account</a>
 </div>
 <?php
-include '../includes/footer.php';
+include '../../includes/footer.php';
 ?>

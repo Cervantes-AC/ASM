@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/auth_check.php';
+require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
 $userId = $_SESSION['user_id'];
@@ -46,8 +46,8 @@ $stmt = $pdo->prepare(
 $stmt->execute([$userId]);
 $borrowedAssets = $stmt->fetchAll();
 
-include '../includes/header.php';
-include '../includes/navbar.php';
+include '../../includes/header.php';
+include '../../includes/navbar.php';
 ?>
 <div class="container">
     <h2>Return Borrowed Assets</h2>
@@ -76,5 +76,5 @@ include '../includes/navbar.php';
     <?php endif; ?>
 </div>
 <?php
-include '../includes/footer.php';
+include '../../includes/footer.php';
 ?>

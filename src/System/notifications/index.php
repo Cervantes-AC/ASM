@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/auth_check.php';
+require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
 $userId = $_SESSION['user_id'];
@@ -18,8 +18,8 @@ $stmt = $pdo->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY cr
 $stmt->execute([$userId]);
 $notifications = $stmt->fetchAll();
 
-include '../includes/header.php';
-include '../includes/navbar.php';
+include '../../includes/header.php';
+include '../../includes/navbar.php';
 ?>
 <div class="container">
     <h2>Notifications</h2>
@@ -50,5 +50,5 @@ include '../includes/navbar.php';
     <?php endif; ?>
 </div>
 <?php
-include '../includes/footer.php';
+include '../../includes/footer.php';
 ?>

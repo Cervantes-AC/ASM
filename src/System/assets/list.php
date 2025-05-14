@@ -1,13 +1,13 @@
 <?php
-require_once '../includes/auth_check.php';
+require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
 // Fetch assets from the database
 $stmt = $pdo->query("SELECT * FROM assets ORDER BY asset_id DESC");
 $assets = $stmt->fetchAll();
 
-include '../includes/header.php';
-include '../includes/navbar.php';
+include '../../includes/header.php';
+include '../../includes/navbar.php';
 ?>
 
 <div class="container">
@@ -51,5 +51,5 @@ include '../includes/navbar.php';
 </div>
 
 <?php
-include '../includes/footer.php';
+include '../../includes/footer.php';
 ?>

@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/auth_check.php';
+require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
 $userId = $_SESSION['user_id'];
@@ -40,8 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $assetsStmt = $pdo->query("SELECT * FROM assets WHERE status = 'available'");
 $availableAssets = $assetsStmt->fetchAll();
 
-include '../includes/header.php';
-include '../includes/navbar.php';
+include '../../includes/header.php';
+include '../../includes/navbar.php';
 ?>
 <div class="container">
     <h2>Request to Borrow Asset</h2>
@@ -66,5 +66,5 @@ include '../includes/navbar.php';
     </form>
 </div>
 <?php
-include '../includes/footer.php';
+include '../../includes/footer.php';
 ?>
