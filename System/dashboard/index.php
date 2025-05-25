@@ -1,12 +1,11 @@
 <?php
-
-
 require_once '../config/db.php';
+session_start(); // Make sure the session is started
 
 // Determine login state and role
 $isLoggedIn = isset($_SESSION['user_id']);
-$userRole   = $_SESSION['role']       ?? 'guest';
-$username   = $_SESSION['full_name']  ?? 'Guest';
+$userRole   = $isLoggedIn ? $_SESSION['role'] : null;
+$fullName   = $isLoggedIn ? $_SESSION['full_name'] : 'Guest';
 
 // Initialize stats variables
 $totalAssets = 0;
@@ -17,7 +16,7 @@ if ($isLoggedIn) {
     if ($userRole === 'admin') {
         $totalAssets = (int) $pdo->query("SELECT COUNT(*) FROM assets")->fetchColumn();
         $borrowedAssets = (int) $pdo->query("SELECT COUNT(*) FROM borrow_requests WHERE status='approved'")->fetchColumn();
-    } else {
+    } elseif ($userRole === 'member') {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM borrow_requests WHERE user_id = ? AND status = 'approved'");
         $stmt->execute([$_SESSION['user_id']]);
         $borrowedAssets = (int) $stmt->fetchColumn();
@@ -34,12 +33,36 @@ include '../../includes/header.php';
     <meta charset="UTF-8">
     <title>Dashboard – Asset Management System</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 0; }
-        main { max-width: 800px; margin: 2rem auto; padding: 2rem; background: #fff; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #333; }
-        .stats { margin:1rem 0; padding:1rem; background:#e9f5ff; border-left:5px solid #007bff; }
-        a.link { color: #007bff; text-decoration: none; }
-        a.link:hover { text-decoration: underline; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 0;
+        }
+        main {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .stats {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #e9f5ff;
+            border-left: 5px solid #007bff;
+        }
+        a.link {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a.link:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -47,7 +70,7 @@ include '../../includes/header.php';
 <main>
     <h1>
         <?php if ($isLoggedIn): ?>
-            Welcome, <?= htmlspecialchars($username) ?>!
+            Welcome, <?= htmlspecialchars($fullName) ?>!
         <?php else: ?>
             Welcome to the Asset Management System
         <?php endif; ?>
@@ -58,15 +81,20 @@ include '../../includes/header.php';
         <?php if ($userRole === 'admin'): ?>
             <div class="stats">
                 <p><strong>Total Assets:</strong> <?= $totalAssets ?></p>
-                <p><strong>Borrowed Assets:</strong> <?= $borrowedAssets ?></p>
+                <p><strong>Borrowed Assets (All):</strong> <?= $borrowedAssets ?></p>
+                <p>You can manage assets, users, logs, and view reports.</p>
             </div>
-            <p><a class="link" href="assets/list.php">➤ Manage Assets</a></p>
-            <p><a class="link" href="users/list.php">➤ Manage Users</a></p>
+
+        <?php elseif ($userRole === 'member'): ?>
+            <div class="stats">
+                <p><strong>Your Active Borrowed Assets:</strong> <?= $borrowedAssets ?></p>
+                <p>You may borrow available assets and view your fines and history.</p>
+            </div>
+
         <?php else: ?>
             <div class="stats">
-                <p><strong>You have <?= $borrowedAssets ?> active borrowed item(s).</strong></p>
+                <p>You are logged in with limited access. Please contact admin for role upgrade.</p>
             </div>
-            <p><a class="link" href="assets/list.php">➤ Browse Available Assets</a></p>
         <?php endif; ?>
 
     <?php else: ?>

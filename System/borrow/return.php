@@ -3,24 +3,27 @@
 require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
-
 $userId = $_SESSION['user_id'];
 $userRole = $_SESSION['role'];
 
-// Fetch borrow requests that are approved (borrowed by user) but not yet returned
+// Fetch approved borrow requests that are not yet returned
 if ($userRole === 'admin') {
-    // Admin can see all approved borrow requests not yet returned
-    $stmt = $pdo->prepare("SELECT br.borrow_id, a.asset_name, br.quantity, br.date_borrowed, br.expected_return 
+    $stmt = $pdo->prepare("
+        SELECT br.borrow_id, a.asset_name, br.quantity, br.date_borrowed, br.expected_return 
         FROM borrow_requests br 
         JOIN assets a ON br.asset_id = a.asset_id 
-        WHERE br.status = 'approved' ORDER BY br.date_borrowed DESC");
+        WHERE br.status = 'approved' 
+        ORDER BY br.date_borrowed DESC
+    ");
     $stmt->execute();
 } else {
-    // Normal users see only their own approved borrow requests
-    $stmt = $pdo->prepare("SELECT br.borrow_id, a.asset_name, br.quantity, br.date_borrowed, br.expected_return 
+    $stmt = $pdo->prepare("
+        SELECT br.borrow_id, a.asset_name, br.quantity, br.date_borrowed, br.expected_return 
         FROM borrow_requests br 
         JOIN assets a ON br.asset_id = a.asset_id 
-        WHERE br.user_id = ? AND br.status = 'approved' ORDER BY br.date_borrowed DESC");
+        WHERE br.user_id = ? AND br.status = 'approved' 
+        ORDER BY br.date_borrowed DESC
+    ");
     $stmt->execute([$userId]);
 }
 $borrowedItems = $stmt->fetchAll();
@@ -28,27 +31,40 @@ $borrowedItems = $stmt->fetchAll();
 // Handle return submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $borrow_id = $_POST['borrow_id'] ?? null;
-    $condition = $_POST['condition'] ?? null;
-    $remarks = $_POST['remarks'] ?? null;
+    $condition = $_POST['condition'] ?? '';
+    $remarks = $_POST['remarks'] ?? '';
 
     if ($borrow_id) {
-        // Insert into returns table
+        // Insert return record
         $stmt = $pdo->prepare("INSERT INTO returns (borrow_id, return_date, `condition`, remarks) VALUES (?, NOW(), ?, ?)");
         $stmt->execute([$borrow_id, $condition, $remarks]);
 
-        // Update borrow_requests status to 'returned'
+        // Update status of borrow request
         $stmt = $pdo->prepare("UPDATE borrow_requests SET status = 'returned' WHERE borrow_id = ?");
         $stmt->execute([$borrow_id]);
 
-        // Increase asset quantity back
-        // Get asset_id and quantity from borrow_requests
+        // Get asset info from the borrow request
         $stmt = $pdo->prepare("SELECT asset_id, quantity FROM borrow_requests WHERE borrow_id = ?");
         $stmt->execute([$borrow_id]);
         $borrow = $stmt->fetch();
 
         if ($borrow) {
+            // Update asset quantity
             $stmt = $pdo->prepare("UPDATE assets SET quantity = quantity + ? WHERE asset_id = ?");
             $stmt->execute([$borrow['quantity'], $borrow['asset_id']]);
+
+            // Fetch asset name for logging
+            $stmt = $pdo->prepare("SELECT asset_name FROM assets WHERE asset_id = ?");
+            $stmt->execute([$borrow['asset_id']]);
+            $asset = $stmt->fetch();
+
+            // Insert log entry
+            $log_stmt = $pdo->prepare("
+                INSERT INTO logs (user_id, action, target_id, description)
+                VALUES (?, 'return_asset', ?, ?)
+            ");
+            $log_description = "User returned asset '{$asset['asset_name']}' (Borrow ID: $borrow_id), Quantity: {$borrow['quantity']}, Condition: $condition.";
+            $log_stmt->execute([$userId, $borrow_id, $log_description]);
         }
 
         header('Location: return.php?success=1');

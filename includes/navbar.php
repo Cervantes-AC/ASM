@@ -43,17 +43,22 @@ $isLoggedIn = isset($_SESSION['user_id']);
         <li><a href="/ASM/System/about.php">About Us</a></li>
 
         <?php if ($isLoggedIn): ?>
-            <li><a href="/ASM/System/assets/list.php">Assets</a></li>
-            <li><a href="/ASM/System/borrow/request.php">Borrow</a></li>
-            <li><a href="/ASM/System/users/profile.php">Profile</a></li>
+            <?php if ($userRole === 'member'): ?>
+                <li><a href="/ASM/System/assets/list.php">Assets</a></li>
+                <li><a href="/ASM/System/borrow/return.php">Return Item</a></li>
+                <li><a href="/ASM/System/fines/manage.php">Fines</a></li>
 
-            <?php if ($userRole === 'admin'): ?>
+            <?php elseif ($userRole === 'admin'): ?>
+                <li><a href="/ASM/System/assets/list.php">Assets</a></li>
+                <li><a href="/ASM/System/borrow/manage_requests.php">Borrow</a></li>
                 <li><a href="/ASM/System/users/list.php">Manage Users</a></li>
                 <li><a href="/ASM/System/fines/manage.php">Fines</a></li>
                 <li><a href="/ASM/System/logs/view_logs.php">Logs</a></li>
             <?php endif; ?>
 
+            <li><a href="/ASM/System/users/profile.php">Profile</a></li>
             <li><a href="/ASM/System/auth/logout.php">Logout</a></li>
+
         <?php else: ?>
             <li><a href="/ASM/System/auth/login.php">Login</a></li>
         <?php endif; ?>

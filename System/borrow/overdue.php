@@ -100,6 +100,4 @@ include '../../includes/header.php';
     </tbody>
 </table>
 
-<p><a href="../dashboarrd/index.php">Back to Dashboard</a></p>
-
 <?php include '../../includes/footer.php'; ?>

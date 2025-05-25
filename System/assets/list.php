@@ -3,7 +3,6 @@
 require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
-
 $userRole = $_SESSION['role'];
 
 // Fetch all assets
@@ -29,7 +28,7 @@ include '../../includes/header.php';
             <th>Status</th>
             <th>Location</th>
             <th>Date Added</th>
-            <?php if ($userRole === 'admin' || $userRole === 'staff'): ?>
+            <?php if ($userRole === 'admin' || $userRole === 'staff' || $userRole === 'member'): ?>
                 <th>Actions</th>
             <?php endif; ?>
         </tr>
@@ -45,10 +44,20 @@ include '../../includes/header.php';
                 <td><?= htmlspecialchars($asset['location']) ?></td>
                 <td><?= htmlspecialchars($asset['date_added']) ?></td>
                 <?php if ($userRole === 'admin' || $userRole === 'staff'): ?>
-                <td>
-                    <a href="edit.php?id=<?= $asset['asset_id'] ?>">Edit</a> | 
-                    <a href="delete.php?id=<?= $asset['asset_id'] ?>" onclick="return confirm('Delete this asset?');">Delete</a>
-                </td>
+                    <td>
+                        <a href="edit.php?id=<?= $asset['asset_id'] ?>">Edit</a> | 
+                        <a href="delete.php?id=<?= $asset['asset_id'] ?>" onclick="return confirm('Delete this asset?');">Delete</a>
+                    </td>
+                <?php elseif ($userRole === 'member'): ?>
+                    <td>
+                        <?php if ($asset['status'] === 'available' && $asset['quantity'] > 0): ?>
+                            <a href="../borrow/request.php?asset_id=<?= $asset['asset_id'] ?>">Request to Borrow</a>
+                        <?php else: ?>
+                            Not Available
+                        <?php endif; ?>
+                    </td>
+                <?php else: ?>
+                    <td>-</td>
                 <?php endif; ?>
             </tr>
         <?php endforeach; ?>
