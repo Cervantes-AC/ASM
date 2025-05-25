@@ -1,13 +1,19 @@
 <?php
-// System/index.php
-
-// Redirect logged-in users to the dashboard
-if (isset($_SESSION['user_id'])) {
-    header('Location: ./dashboard/index.php');
-    exit;
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
-// Redirect guests to the About page
-header('Location: ./about.php');
-exit;
+// Determine login state and role
+$isLoggedIn = isset($_SESSION['user_id']);
+$userRole = $_SESSION['role'] ?? 'guest';
+
+// Redirect users based on login state
+if ($isLoggedIn) {
+    header('Location: /ASM/System/dashboard/index.php');
+    exit;
+} else {
+    header('Location: /ASM/System/about.php');
+    exit;
+}
 ?>

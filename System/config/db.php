@@ -1,8 +1,6 @@
 <?php
 // System/config/db.php
 
-session_start();  // Ensure sessions are started here if not started already
-
 $host = 'localhost';    
 $db   = 'final';        
 $user = 'root';         

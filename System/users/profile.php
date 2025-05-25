@@ -2,7 +2,6 @@
 require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
-checkAuth();
 
 $userId = $_SESSION['user_id'];  // Get logged-in user ID from session
 
@@ -10,7 +9,7 @@ $error = '';
 $success = '';
 
 // Fetch current user data
-$stmt = $pdo->prepare("SELECT username, full_name, email FROM users WHERE user_id = ?");
+$stmt = $pdo->prepare("SELECT full_name, email FROM users WHERE user_id = ?");
 $stmt->execute([$userId]);
 $user = $stmt->fetch();
 
@@ -86,9 +85,6 @@ include '../../includes/header.php';
 <?php endif; ?>
 
 <form method="post" action="">
-    <label>Username:<br>
-        <input type="text" name="username" value="<?= htmlspecialchars($user['username']) ?>" disabled>
-    </label><br><br>
 
     <label>Full Name:<br>
         <input type="text" name="full_name" required value="<?= htmlspecialchars($user['full_name']) ?>">

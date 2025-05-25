@@ -1,12 +1,19 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-if (isset($_SESSION['user_id'])) {
-    // Redirect logged-in users to the dashboard
-    header('Location: ./dashboard/index.php');
-    exit;
-} else {
-    // Redirect guests to the about page or login
-    header('Location: ./about.php'); // or use './auth/login.php' if preferred
+// Check if logged in and if user has required permissions
+if (!isset($_SESSION['user_id'])) {
+    // Redirect to the main about page using an absolute path
+    header('Location: /ASM/System/about.php');
     exit;
 }
+
+// If you want to check role, e.g. admin only
+if ($_SESSION['role'] !== 'admin') {
+    // Redirect unauthorized users to about page as well
+    header('Location: /ASM/System/about.php');
+    exit;
+}
+?>

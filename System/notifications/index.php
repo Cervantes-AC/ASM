@@ -2,7 +2,6 @@
 require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
-checkAuth();
 
 $userId = $_SESSION['user_id'];
 

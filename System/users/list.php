@@ -2,7 +2,6 @@
 require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
-checkAuth(); // ensure user logged in
 $userRole = $_SESSION['role'];
 
 if ($userRole !== 'admin') {
@@ -12,8 +11,8 @@ if ($userRole !== 'admin') {
     exit;
 }
 
-// Fetch all users
-$stmt = $pdo->query("SELECT user_id, username, full_name, email, role FROM users ORDER BY user_id ASC");
+// Fetch all users without 'username'
+$stmt = $pdo->query("SELECT user_id, full_name, email, role FROM users ORDER BY user_id ASC");
 $users = $stmt->fetchAll();
 
 include '../../includes/header.php';
@@ -26,14 +25,13 @@ include '../../includes/header.php';
 <table border="1" cellpadding="5" cellspacing="0">
     <thead>
         <tr>
-            <th>ID</th><th>Username</th><th>Full Name</th><th>Email</th><th>Role</th><th>Actions</th>
+            <th>ID</th><th>Full Name</th><th>Email</th><th>Role</th><th>Actions</th>
         </tr>
     </thead>
     <tbody>
         <?php foreach ($users as $user): ?>
         <tr>
             <td><?= htmlspecialchars($user['user_id']) ?></td>
-            <td><?= htmlspecialchars($user['username']) ?></td>
             <td><?= htmlspecialchars($user['full_name']) ?></td>
             <td><?= htmlspecialchars($user['email']) ?></td>
             <td><?= htmlspecialchars($user['role']) ?></td>

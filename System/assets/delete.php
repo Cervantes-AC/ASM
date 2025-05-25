@@ -3,7 +3,6 @@
 require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
-checkAuth();
 
 // Only admin can delete assets
 if ($_SESSION['role'] !== 'admin') {

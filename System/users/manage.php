@@ -2,8 +2,6 @@
 require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
-checkAuth();
-
 $userRole = $_SESSION['role'];
 if ($userRole !== 'admin') {
     header('HTTP/1.1 403 Forbidden');
@@ -19,45 +17,44 @@ $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Process form submission for add or edit
-    $username = trim($_POST['username']);
     $full_name = trim($_POST['full_name']);
     $email = trim($_POST['email']);
     $role = $_POST['role'];
     $password = $_POST['password'] ?? '';
     $password_confirm = $_POST['password_confirm'] ?? '';
 
-    if (empty($username) || empty($full_name) || empty($email) || empty($role)) {
+    if (empty($full_name) || empty($email) || empty($role)) {
         $error = "Please fill in all required fields.";
     } elseif ($action === 'add' && (empty($password) || $password !== $password_confirm)) {
         $error = "Passwords are required and must match.";
     } elseif ($action === 'edit' && !empty($password) && $password !== $password_confirm) {
         $error = "Passwords must match.";
     } else {
-        // Check if username/email is unique for add or edit
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE (username = ? OR email = ?) " . ($action === 'edit' ? "AND user_id != ?" : ""));
+        // Check if email is unique for add or edit
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE email = ?" . ($action === 'edit' ? " AND user_id != ?" : ""));
         if ($action === 'edit') {
-            $stmt->execute([$username, $email, $id]);
+            $stmt->execute([$email, $id]);
         } else {
-            $stmt->execute([$username, $email]);
+            $stmt->execute([$email]);
         }
         $count = $stmt->fetchColumn();
 
         if ($count > 0) {
-            $error = "Username or email already exists.";
+            $error = "Email already exists.";
         } else {
             if ($action === 'add') {
-                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $pdo->prepare("INSERT INTO users (username, full_name, email, role, password) VALUES (?, ?, ?, ?, ?)");
-                $stmt->execute([$username, $full_name, $email, $role, $hashedPassword]);
+                // Store password as plain text (no hashing)
+                $stmt = $pdo->prepare("INSERT INTO users (full_name, email, role, password) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$full_name, $email, $role, $password]);
                 $success = "User added successfully.";
             } elseif ($action === 'edit') {
                 if (!empty($password)) {
-                    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare("UPDATE users SET username = ?, full_name = ?, email = ?, role = ?, password = ? WHERE user_id = ?");
-                    $stmt->execute([$username, $full_name, $email, $role, $hashedPassword, $id]);
+                    // Update password as plain text (no hashing)
+                    $stmt = $pdo->prepare("UPDATE users SET full_name = ?, email = ?, role = ?, password = ? WHERE user_id = ?");
+                    $stmt->execute([$full_name, $email, $role, $password, $id]);
                 } else {
-                    $stmt = $pdo->prepare("UPDATE users SET username = ?, full_name = ?, email = ?, role = ? WHERE user_id = ?");
-                    $stmt->execute([$username, $full_name, $email, $role, $id]);
+                    $stmt = $pdo->prepare("UPDATE users SET full_name = ?, email = ?, role = ? WHERE user_id = ?");
+                    $stmt->execute([$full_name, $email, $role, $id]);
                 }
                 $success = "User updated successfully.";
             }
@@ -70,7 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // For edit and delete: fetch existing user data
 $userData = [
-    'username' => '',
     'full_name' => '',
     'email' => '',
     'role' => '',
@@ -112,7 +108,7 @@ include '../../includes/header.php';
 <?php endif; ?>
 
 <?php if ($action === 'delete'): ?>
-    <p>Are you sure you want to delete user <strong><?= htmlspecialchars($userData['username']) ?></strong>?</p>
+    <p>Are you sure you want to delete user <strong><?= htmlspecialchars($userData['full_name']) ?></strong>?</p>
     <form method="post">
         <button type="submit">Yes, Delete</button>
         <a href="list.php">Cancel</a>
@@ -121,10 +117,6 @@ include '../../includes/header.php';
 <?php elseif ($action === 'add' || $action === 'edit'): ?>
 
     <form method="post" action="">
-        <label>Username:<br>
-            <input type="text" name="username" required value="<?= htmlspecialchars($userData['username']) ?>">
-        </label><br><br>
-
         <label>Full Name:<br>
             <input type="text" name="full_name" required value="<?= htmlspecialchars($userData['full_name']) ?>">
         </label><br><br>
@@ -136,7 +128,6 @@ include '../../includes/header.php';
         <label>Role:<br>
             <select name="role" required>
                 <option value="admin" <?= $userData['role'] === 'admin' ? 'selected' : '' ?>>Admin</option>
-                <option value="staff" <?= $userData['role'] === 'staff' ? 'selected' : '' ?>>Staff</option>
                 <option value="member" <?= $userData['role'] === 'member' ? 'selected' : '' ?>>Member</option>
             </select>
         </label><br><br>

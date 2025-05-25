@@ -3,7 +3,6 @@
 require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
-checkAuth();
 
 $userRole = $_SESSION['role'];
 

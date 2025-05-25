@@ -3,8 +3,6 @@
 require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
-checkAuth();
-
 // Only admin and staff can add assets
 if (!in_array($_SESSION['role'], ['admin', 'staff'])) {
     header("Location: list.php");

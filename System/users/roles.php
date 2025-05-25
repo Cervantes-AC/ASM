@@ -1,8 +1,6 @@
 <?php
 require_once '../../includes/auth_check.php';
 
-checkAuth();
-
 $userRole = $_SESSION['role'];
 if ($userRole !== 'admin') {
     header('HTTP/1.1 403 Forbidden');
