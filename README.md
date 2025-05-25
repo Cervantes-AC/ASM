@@ -1,4 +1,4 @@
-asset-management-system/
+ASM/
 ├── includes/
 │   ├── header.php           # Common page header (HTML <head>, nav menu, scripts)
 │   ├── footer.php           # Common footer content (closing tags, footer scripts)

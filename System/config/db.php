@@ -1,11 +1,13 @@
 <?php
 // System/config/db.php
 
-$host = 'localhost';    // Database host
-$db   = 'final';        // Database name
-$user = 'root';         // Database username
-$pass = '';             // Database password
-$charset = 'utf8mb4';   // Character set for connection
+session_start();  // Ensure sessions are started here if not started already
+
+$host = 'localhost';    
+$db   = 'final';        
+$user = 'root';         
+$pass = '';             
+$charset = 'utf8mb4';   
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 

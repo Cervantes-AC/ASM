@@ -1,4 +1,5 @@
 <?php
+
 require_once '../config/db.php';
 
 // Redirect if already logged in
@@ -21,7 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$email]);
         $user = $stmt->fetch();
 
-        if ($user && $user['status'] === 'active' && password_verify($password, $user['password'])) {
+        // Plain text password comparison instead of password_verify()
+        if ($user && $user['status'] === 'active' && $password === $user['password']) {
             session_regenerate_id(true);
 
             $_SESSION['user_id'] = $user['user_id'];
@@ -38,12 +40,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
     <title>Login - Asset Management System</title>
     <style>
+        /* Your exact styles here, unchanged */
         body {
             margin: 0;
             font-family: Arial, sans-serif;
@@ -155,7 +159,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         >
 
         <button type="submit">Login</button>
-    
     </form>
 </div>
 

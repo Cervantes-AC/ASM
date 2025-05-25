@@ -4,9 +4,6 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 $userRole = $_SESSION['role'] ?? 'guest';
 $isLoggedIn = isset($_SESSION['user_id']);
-
-// Base URL path of the app (adjust if your app is in a subfolder)
-$basePath = '/asset-management-system/';
 ?>
 
 <style>
@@ -42,23 +39,23 @@ $basePath = '/asset-management-system/';
 
 <nav>
     <ul>
-        <li><a href="<?= $basePath ?>System/dashboard/index.php">Dashboard</a></li>
-        <li><a href="<?= $basePath ?>System/about.php">About Us</a></li>
+        <li><a href="/ASM/System/dashboard/index.php">Dashboard</a></li>
+        <li><a href="/ASM/System/about.php">About Us</a></li>
 
         <?php if ($isLoggedIn): ?>
-            <li><a href="<?= $basePath ?>System/assets/list.php">Assets</a></li>
-            <li><a href="<?= $basePath ?>System/borrow/request.php">Borrow</a></li>
-            <li><a href="<?= $basePath ?>System/users/profile.php">Profile</a></li>
+            <li><a href="/ASM/System/assets/list.php">Assets</a></li>
+            <li><a href="/ASM/System/borrow/request.php">Borrow</a></li>
+            <li><a href="/ASM/System/users/profile.php">Profile</a></li>
 
             <?php if ($userRole === 'admin'): ?>
-                <li><a href="<?= $basePath ?>System/users/list.php">Manage Users</a></li>
-                <li><a href="<?= $basePath ?>System/fines/manage.php">Fines</a></li>
-                <li><a href="<?= $basePath ?>System/logs/view_logs.php">Logs</a></li>
+                <li><a href="/ASM/System/users/list.php">Manage Users</a></li>
+                <li><a href="/ASM/System/fines/manage.php">Fines</a></li>
+                <li><a href="/ASM/System/logs/view_logs.php">Logs</a></li>
             <?php endif; ?>
 
-            <li><a href="<?= $basePath ?>System/auth/logout.php">Logout</a></li>
+            <li><a href="/ASM/System/auth/logout.php">Logout</a></li>
         <?php else: ?>
-            <li><a href="<?= $basePath ?>System/auth/login.php">Login</a></li>
+            <li><a href="/ASM/System/auth/login.php">Login</a></li>
         <?php endif; ?>
     </ul>
 </nav>

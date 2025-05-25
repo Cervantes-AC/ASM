@@ -1,7 +1,6 @@
 <?php
-// System/dashboard/index.php
 
-session_start();
+
 require_once '../config/db.php';
 
 // Determine login state and role
@@ -9,18 +8,26 @@ $isLoggedIn = isset($_SESSION['user_id']);
 $userRole   = $_SESSION['role']       ?? 'guest';
 $username   = $_SESSION['full_name']  ?? 'Guest';
 
+// Initialize stats variables
+$totalAssets = 0;
+$borrowedAssets = 0;
+
 // If logged in, fetch stats
 if ($isLoggedIn) {
     if ($userRole === 'admin') {
-        $totalAssets    = $pdo->query("SELECT COUNT(*) FROM assets")->fetchColumn();
-        $borrowedAssets = $pdo->query("SELECT COUNT(*) FROM borrow_requests WHERE status='approved'")->fetchColumn();
+        $totalAssets = (int) $pdo->query("SELECT COUNT(*) FROM assets")->fetchColumn();
+        $borrowedAssets = (int) $pdo->query("SELECT COUNT(*) FROM borrow_requests WHERE status='approved'")->fetchColumn();
     } else {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM borrow_requests WHERE user_id = ? AND status = 'approved'");
         $stmt->execute([$_SESSION['user_id']]);
-        $borrowedAssets = $stmt->fetchColumn();
+        $borrowedAssets = (int) $stmt->fetchColumn();
     }
 }
+
+// Include header after session started
+include '../../includes/header.php';
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -28,10 +35,6 @@ if ($isLoggedIn) {
     <title>Dashboard – Asset Management System</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 0; }
-        nav { background: #007bff; padding: .75rem; }
-        nav ul { list-style: none; margin: 0; padding: 0; display: flex; justify-content: center; gap: 1rem; }
-        nav a { color: white; text-decoration: none; padding: .5rem 1rem; border-radius:4px; }
-        nav a:hover { background: #0056b3; }
         main { max-width: 800px; margin: 2rem auto; padding: 2rem; background: #fff; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
         h1 { color: #333; }
         .stats { margin:1rem 0; padding:1rem; background:#e9f5ff; border-left:5px solid #007bff; }
@@ -41,7 +44,6 @@ if ($isLoggedIn) {
 </head>
 <body>
 
-<?php include '../../includes/navbar.php'; ?>
 <main>
     <h1>
         <?php if ($isLoggedIn): ?>
