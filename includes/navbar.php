@@ -9,8 +9,30 @@ $isLoggedIn = isset($_SESSION['user_id']);
 <style>
     nav {
         background-color: #007bff;
-        padding: 0.75rem 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 0.5rem 1.5rem;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    nav .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        color: white;
+        font-weight: 700;
+        font-size: 1.3rem;
+        user-select: none;
+    }
+
+    nav .logo img {
+        height: 40px;
+        width: auto;
+        object-fit: contain;
+        border-radius: 4px;
+        box-shadow: 0 0 5px rgba(255, 255, 255, 0.4);
     }
 
     nav ul {
@@ -18,9 +40,8 @@ $isLoggedIn = isset($_SESSION['user_id']);
         margin: 0;
         padding: 0;
         display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 1rem;
+        gap: 1.2rem;
+        align-items: center;
     }
 
     nav ul li a {
@@ -28,16 +49,37 @@ $isLoggedIn = isset($_SESSION['user_id']);
         text-decoration: none;
         font-weight: 600;
         padding: 0.5rem 1rem;
-        border-radius: 4px;
-        transition: background-color 0.3s ease;
+        border-radius: 5px;
+        transition: background-color 0.3s ease, color 0.3s ease;
     }
 
-    nav ul li a:hover {
+    nav ul li a:hover,
+    nav ul li a:focus {
         background-color: #0056b3;
+        color: #e0eaff;
+        outline: none;
+    }
+
+    /* Responsive tweak for smaller widths */
+    @media (max-width: 600px) {
+        nav {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        nav ul {
+            flex-wrap: wrap;
+            gap: 0.7rem;
+            margin-top: 0.5rem;
+        }
     }
 </style>
 
 <nav>
+    <a href="/ASM/System/dashboard/index.php" class="logo" aria-label="CMU-SSC Home">
+        <img src="/ASM/includes/logo.jpg" alt="CMU-SSC Logo" />
+        CMU-SSC
+    </a>
+
     <ul>
         <li><a href="/ASM/System/dashboard/index.php">Dashboard</a></li>
         <li><a href="/ASM/System/about.php">About Us</a></li>

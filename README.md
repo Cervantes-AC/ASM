@@ -38,8 +38,7 @@ ASM/
 │   ├── users/
 │   │   ├── profile.php      # User profile view and update page
 │   │   ├── list.php         # List of all users (for Admin)
-│   │   ├── manage.php       # Admin user management (add, edit, disable)
-│   │   └── roles.php        # Role definitions and assignments management
+│   │   └── manage.php       # Admin user management (add, edit, disable)
 │   │
 │   ├── notifications/
 │   │   └── index.php        # User notifications center (due dates, approvals, fines)
