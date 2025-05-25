@@ -1,13 +1,12 @@
 <?php
-session_start();
 
-// Check if user is logged in by checking session variables
+include '../includes/header.php';
 if (isset($_SESSION['user_id'])) {
-    // User logged in — redirect to dashboard
-    header('Location: /dashboard/index.php');
+    // Redirect logged-in users to the dashboard
+    header('Location: ./dashboard/index.php');
     exit;
 } else {
-    // Not logged in — redirect to login page
-    header('Location: ./auth/login.php');
+    // Redirect guests to the about page or login
+    header('Location: ./about.php'); // or use './auth/login.php' if preferred
     exit;
 }

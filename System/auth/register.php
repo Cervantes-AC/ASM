@@ -15,10 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $full_name = trim($_POST['full_name']);
     $email = trim($_POST['email']);
     $password = $_POST['password'];
-    $role = $_POST['role'];
+    $role = 'member'; // Fixed role
 
     // Simple validation
-    if (empty($full_name) || empty($email) || empty($password) || empty($role)) {
+    if (empty($full_name) || empty($email) || empty($password)) {
         $error = "Please fill all fields.";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Invalid email format.";
@@ -29,12 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->fetch()) {
             $error = "Email is already registered.";
         } else {
-            // Hash password with bcrypt
-            $password_hash = password_hash($password, PASSWORD_BCRYPT);
-
-            // Insert user
+            // Store password as plain text (not recommended)
             $stmt = $pdo->prepare("INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$full_name, $email, $password_hash, $role]);
+            $stmt->execute([$full_name, $email, $password, $role]);
 
             $_SESSION['success'] = "User registered successfully.";
             header('Location: list.php');  // Redirect to user list page
@@ -49,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="en">
 <head><title>Register User</title></head>
 <body>
-<h2>Register New User</h2>
+<h2>Register New Member</h2>
 <?php if (!empty($error)): ?>
     <p style="color:red"><?= htmlspecialchars($error) ?></p>
 <?php endif; ?>
@@ -57,13 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Full Name: <input type="text" name="full_name" required><br>
     Email: <input type="email" name="email" required><br>
     Password: <input type="password" name="password" required><br>
-    Role:
-    <select name="role" required>
-        <option value="">Select role</option>
-        <option value="admin">Admin</option>
-        <option value="staff">Staff</option>
-        <option value="member">Member</option>
-    </select><br>
+    <input type="hidden" name="role" value="member">
     <button type="submit">Register</button>
 </form>
 </body>

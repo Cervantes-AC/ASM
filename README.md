@@ -29,6 +29,7 @@ asset-management-system/
 │   │   └── index.php        # Role-based dashboard landing page
 │   │
 │   ├── fines/
+│   │   ├── add.php 
 │   │   └── manage.php       # Admin page to manage fines, payments, and penalties
 │   │
 │   ├── logs/
@@ -43,6 +44,7 @@ asset-management-system/
 │   ├── notifications/
 │   │   └── index.php        # User notifications center (due dates, approvals, fines)
 │   │
+│   ├── about.php            #about page
 │   └── index.php            # Main app entry (redirect to login or dashboard)
 │
 ├── README.md                # Project overview, setup instructions, and file explanations
