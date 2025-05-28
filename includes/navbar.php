@@ -81,21 +81,18 @@ $isLoggedIn = isset($_SESSION['user_id']);
     </a>
 
     <ul>
-        <li><a href="/ASM/System/dashboard/index.php">Dashboard</a></li>
+        <li><a href="/ASM/index.php">Dashboard</a></li>
         <li><a href="/ASM/System/about.php">About Us</a></li>
 
         <?php if ($isLoggedIn): ?>
             <?php if ($userRole === 'member'): ?>
                 <li><a href="/ASM/System/assets/list.php">Assets</a></li>
                 <li><a href="/ASM/System/borrow/return.php">Return Item</a></li>
-                <li><a href="/ASM/System/fines/manage.php">Fines</a></li>
 
             <?php elseif ($userRole === 'admin'): ?>
                 <li><a href="/ASM/System/assets/list.php">Assets</a></li>
                 <li><a href="/ASM/System/borrow/manage_requests.php">Borrow</a></li>
                 <li><a href="/ASM/System/users/list.php">Manage Users</a></li>
-                <li><a href="/ASM/System/fines/manage.php">Fines</a></li>
-                <li><a href="/ASM/System/logs/view_logs.php">Logs</a></li>
             <?php endif; ?>
 
             <li><a href="/ASM/System/users/profile.php">Profile</a></li>

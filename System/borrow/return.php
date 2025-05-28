@@ -1,6 +1,4 @@
 <?php
-// System/borrow/return.php
-
 require_once '../../includes/auth_check.php';
 require_once '../config/db.php';
 
@@ -10,19 +8,19 @@ $userRole = $_SESSION['role'];
 // Fetch approved borrow requests that are not yet returned
 if ($userRole === 'admin') {
     $stmt = $pdo->prepare("
-        SELECT br.borrow_id, a.asset_name, br.quantity, br.date_borrowed, br.expected_return 
-        FROM borrow_requests br 
-        JOIN assets a ON br.asset_id = a.asset_id 
-        WHERE br.status = 'approved' 
+        SELECT br.borrow_id, a.asset_name, a.category, a.serial_code, br.quantity, br.date_borrowed, br.expected_return 
+        FROM borrow_requests br
+        JOIN assets a ON br.asset_id = a.asset_id
+        WHERE br.status = 'approved'
         ORDER BY br.date_borrowed DESC
     ");
     $stmt->execute();
 } else {
     $stmt = $pdo->prepare("
-        SELECT br.borrow_id, a.asset_name, br.quantity, br.date_borrowed, br.expected_return 
-        FROM borrow_requests br 
-        JOIN assets a ON br.asset_id = a.asset_id 
-        WHERE br.user_id = ? AND br.status = 'approved' 
+        SELECT br.borrow_id, a.asset_name, a.category, a.serial_code, br.quantity, br.date_borrowed, br.expected_return
+        FROM borrow_requests br
+        JOIN assets a ON br.asset_id = a.asset_id
+        WHERE br.user_id = ? AND br.status = 'approved'
         ORDER BY br.date_borrowed DESC
     ");
     $stmt->execute([$userId]);
@@ -31,44 +29,37 @@ if ($userRole === 'admin') {
 $borrowedItems = $stmt->fetchAll();
 
 // Handle return submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $borrow_id = $_POST['borrow_id'] ?? null;
-    $condition = trim($_POST['condition'] ?? '');
-    $remarks = trim($_POST['remarks'] ?? '');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['borrow_id'])) {
+    $borrow_id = $_POST['borrow_id'];
 
-    if ($borrow_id && $condition !== '') {
-        $stmt = $pdo->prepare("
-            INSERT INTO returns (borrow_id, return_date, `condition`, remarks) 
-            VALUES (?, NOW(), ?, ?)
+    // Mark as returned
+    $stmt = $pdo->prepare("UPDATE borrow_requests SET status = 'returned' WHERE borrow_id = ?");
+    $stmt->execute([$borrow_id]);
+
+    // Update asset quantity
+    $stmt = $pdo->prepare("SELECT asset_id, quantity FROM borrow_requests WHERE borrow_id = ?");
+    $stmt->execute([$borrow_id]);
+    $borrow = $stmt->fetch();
+
+    if ($borrow) {
+        $stmt = $pdo->prepare("UPDATE assets SET quantity = quantity + ? WHERE asset_id = ?");
+        $stmt->execute([$borrow['quantity'], $borrow['asset_id']]);
+
+        $stmt = $pdo->prepare("SELECT asset_name FROM assets WHERE asset_id = ?");
+        $stmt->execute([$borrow['asset_id']]);
+        $asset = $stmt->fetch();
+
+        // Log the return
+        $log_stmt = $pdo->prepare("
+            INSERT INTO logs (user_id, action, target_id, description)
+            VALUES (?, 'return_asset', ?, ?)
         ");
-        $stmt->execute([$borrow_id, $condition, $remarks]);
-
-        $stmt = $pdo->prepare("UPDATE borrow_requests SET status = 'returned' WHERE borrow_id = ?");
-        $stmt->execute([$borrow_id]);
-
-        $stmt = $pdo->prepare("SELECT asset_id, quantity FROM borrow_requests WHERE borrow_id = ?");
-        $stmt->execute([$borrow_id]);
-        $borrow = $stmt->fetch();
-
-        if ($borrow) {
-            $stmt = $pdo->prepare("UPDATE assets SET quantity = quantity + ? WHERE asset_id = ?");
-            $stmt->execute([$borrow['quantity'], $borrow['asset_id']]);
-
-            $stmt = $pdo->prepare("SELECT asset_name FROM assets WHERE asset_id = ?");
-            $stmt->execute([$borrow['asset_id']]);
-            $asset = $stmt->fetch();
-
-            $log_stmt = $pdo->prepare("
-                INSERT INTO logs (user_id, action, target_id, description)
-                VALUES (?, 'return_asset', ?, ?)
-            ");
-            $log_description = "User returned asset '{$asset['asset_name']}' (Borrow ID: $borrow_id), Quantity: {$borrow['quantity']}, Condition: $condition.";
-            $log_stmt->execute([$userId, $borrow_id, $log_description]);
-        }
-
-        header('Location: return.php?success=1');
-        exit;
+        $log_description = "User returned asset '{$asset['asset_name']}' (Borrow ID: $borrow_id), Quantity: {$borrow['quantity']}.";
+        $log_stmt->execute([$userId, $borrow_id, $log_description]);
     }
+
+    header('Location: return.php?success=1');
+    exit;
 }
 
 include '../../includes/header.php';
@@ -92,82 +83,73 @@ include '../../includes/header.php';
     padding: 12px 15px;
     border-radius: 5px;
     margin-bottom: 20px;
-    max-width: 600px;
+    max-width: 800px;
   }
-  .message-info {
-    font-style: italic;
-    color: #666;
-    max-width: 600px;
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    background: white;
+    margin-bottom: 20px;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 10px 14px;
+    text-align: left;
+  }
+  th {
+    background-color: #007bff;
+    color: white;
   }
   form {
-    background: white;
-    padding: 20px 25px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
-    max-width: 600px;
-  }
-  label {
-    font-weight: 600;
-    display: block;
-    margin-bottom: 8px;
-    margin-top: 15px;
-  }
-  select, input[type="text"], textarea {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 1rem;
-    box-sizing: border-box;
-  }
-  select:focus, input[type="text"]:focus, textarea:focus {
-    border-color: #007bff;
-    outline: none;
+    display: inline;
   }
   button {
-    background-color: #007bff;
+    background-color: #28a745;
     border: none;
     color: white;
-    padding: 12px 25px;
-    margin-top: 25px;
-    border-radius: 5px;
+    padding: 6px 12px;
+    border-radius: 4px;
     cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.3s ease;
   }
   button:hover {
-    background-color: #0056b3;
+    background-color: #218838;
   }
 </style>
-<center>
-<h2>Return Borrowed Asset</h2>
+
+<h2>Borrowed Assets</h2>
 
 <?php if (isset($_GET['success'])): ?>
     <div class="message-success">Return processed successfully!</div>
 <?php endif; ?>
 
 <?php if (empty($borrowedItems)): ?>
-    <p class="message-info">You currently have no borrowed items to return.</p>
+    <p>You currently have no borrowed items to return.</p>
 <?php else: ?>
-    <form method="post" action="">
-        <label for="borrow_id">Select Borrowed Item to Return:</label>
-        <select name="borrow_id" id="borrow_id" required>
-            <option value="">-- Select --</option>
+    <table>
+        <thead>
+            <tr>
+                <th>Asset Name</th>
+                <th>Category</th>
+                <th>Serial Code</th>
+                <th>Quantity</th>
+                <th>Date Borrowed</th>
+                <th>Expected Return</th>
+
+            </tr>
+        </thead>
+        <tbody>
             <?php foreach ($borrowedItems as $item): ?>
-                <option value="<?= htmlspecialchars($item['borrow_id']) ?>">
-                    <?= htmlspecialchars($item['asset_name']) ?> — Qty: <?= htmlspecialchars($item['quantity']) ?> — Borrowed on: <?= htmlspecialchars($item['date_borrowed']) ?>
-                </option>
+                <tr>
+                    <td><?= htmlspecialchars($item['asset_name']) ?></td>
+                    <td><?= htmlspecialchars($item['category'] ?? 'N/A') ?></td>
+                    <td><?= htmlspecialchars($item['serial_code'] ?? 'N/A') ?></td>
+                    <td><?= htmlspecialchars($item['quantity']) ?></td>
+                    <td><?= htmlspecialchars($item['date_borrowed']) ?></td>
+                    <td><?= htmlspecialchars($item['expected_return']) ?></td>
+                </tr>
             <?php endforeach; ?>
-        </select>
-
-        <label for="condition">Condition on Return:</label>
-        <input type="text" name="condition" id="condition" placeholder="e.g., Good, Damaged" required>
-
-        <label for="remarks">Remarks:</label>
-        <textarea name="remarks" id="remarks" rows="4" placeholder="Optional remarks"></textarea>
-
-        <button type="submit">Submit Return</button>
-    </form>
+        </tbody>
+    </table>
 <?php endif; ?>
-</center>
+
 <?php include '../../includes/footer.php'; ?>

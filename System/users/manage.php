@@ -1,5 +1,5 @@
 <?php
-// user_manage.php - Single file version with embedded styles
+// user_manage.php - Single file version with embedded styles and filtering
 
 session_start();
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
@@ -12,6 +12,7 @@ require_once '../config/db.php'; // Keep DB connection external for security and
 
 $action = $_GET['action'] ?? '';
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$filter = $_GET['filter'] ?? 'all'; // New filter parameter
 
 $error = '';
 $success = '';
@@ -56,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $success = "User updated successfully.";
             }
-            header("Location: user_manage.php?action=list");
+            header("Location: manage.php?action=list&filter=" . $filter);
             exit;
         }
     }
@@ -81,16 +82,35 @@ if ($action === 'edit' || $action === 'delete') {
 if ($action === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $pdo->prepare("DELETE FROM users WHERE user_id = ?");
     $stmt->execute([$id]);
-    header("Location: user_manage.php?action=list");
+    header("Location: manage.php?action=list&filter=" . $filter);
     exit;
 }
 
-// Fetch all users for list action
+// Fetch all users for list action with filtering
 $users = [];
 if ($action === 'list' || $action === '') {
-    $stmt = $pdo->query("SELECT user_id, full_name, email, role FROM users ORDER BY full_name");
+    $sql = "SELECT user_id, full_name, email, role FROM users";
+    $params = [];
+    
+    // Apply filter based on selection
+    if ($filter === 'admin') {
+        $sql .= " WHERE role = 'admin'";
+    } elseif ($filter === 'client') {
+        $sql .= " WHERE role = 'member'";
+    }
+    // 'all' doesn't need a WHERE clause
+    
+    $sql .= " ORDER BY full_name";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+
+// Get counts for display
+$totalUsers = (int) $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
+$adminCount = (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin'")->fetchColumn();
+$clientCount = (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'member'")->fetchColumn();
 
 ?>
 
@@ -99,16 +119,29 @@ if ($action === 'list' || $action === '') {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>User Management</title>
+<title>User Management - CMU-SSC</title>
 <style>
+    /* Reset and base styles */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
     body {
         font-family: Arial, sans-serif;
+        background: #f9f9f9;
+        color: #333;
+        line-height: 1.6;
+    }
+    
+    /* Main content container */
+    .main-content {
         max-width: 900px;
         margin: 20px auto;
         padding: 0 10px;
-        background: #f9f9f9;
-        color: #333;
     }
+    
     h2 {
         color: #009879;
         margin-bottom: 10px;
@@ -126,6 +159,102 @@ if ($action === 'list' || $action === '') {
     a.button:hover, button:hover {
         background-color: #007f6d;
     }
+    
+    /* Header container for button and filter */
+    .header-container {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    
+    /* Filter dropdown styles */
+    .filter-dropdown {
+        position: relative;
+        display: inline-block;
+    }
+    
+    .filter-btn {
+        background-color: #007bff;
+        color: white;
+        padding: 8px 16px;
+        font-size: 14px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+    }
+    
+    .filter-btn:hover {
+        background-color: #0056b3;
+    }
+    
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        background-color: white;
+        min-width: 200px;
+        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        border-radius: 4px;
+        z-index: 1;
+        top: 100%;
+        left: 0;
+        border: 1px solid #ddd;
+    }
+    
+    .dropdown-content a {
+        color: #333;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+        border-bottom: 1px solid #f0f0f0;
+        font-weight: normal;
+    }
+    
+    .dropdown-content a:last-child {
+        border-bottom: none;
+    }
+    
+    .dropdown-content a:hover {
+        background-color: #f1f1f1;
+    }
+    
+    .dropdown-content a.active {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .filter-dropdown:hover .dropdown-content {
+        display: block;
+    }
+    
+    /* Stats container */
+    .stats-container {
+        background: white;
+        padding: 15px 20px;
+        border-radius: 6px;
+        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .filter-stats {
+        color: #666;
+        font-size: 14px;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .filter-stats span {
+        background: #e9ecef;
+        padding: 4px 8px;
+        border-radius: 3px;
+    }
+    
     table {
         width: 100%;
         border-collapse: collapse;
@@ -186,13 +315,73 @@ if ($action === 'list' || $action === '') {
         font-weight: normal;
         padding: 0;
     }
+    
+    @media (max-width: 600px) {
+        .header-container {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .filter-stats {
+            flex-direction: column;
+            gap: 10px;
+        }
+        .main-content {
+            padding: 0 5px;
+        }
+    }
 </style>
 </head>
 <body>
 
+<!-- Include Navbar -->
+<?php include '../../includes/navbar.php'; ?>
+
+<div class="main-content">
+
 <?php if ($action === 'list' || $action === ''): ?>
-    <h2>User List</h2>
-    <p><a href="?action=add" class="button">Add New User</a></p>
+    
+    <h2>User Management</h2>
+    
+    <!-- Header with Add Button and Filter -->
+    <div class="header-container">
+        <a href="?action=add&filter=<?= $filter ?>" class="button">Add New User</a>
+        
+        <div class="filter-dropdown">
+            <button class="filter-btn">
+                Filter: 
+                <?php 
+                $filterLabels = [
+                    'all' => 'All Accounts',
+                    'admin' => 'Admin',
+                    'client' => 'Client (Members)'
+                ];
+                echo $filterLabels[$filter] ?? 'All Accounts';
+                ?>
+                <span>▼</span>
+            </button>
+            <div class="dropdown-content">
+                <a href="?action=list&filter=all" <?= $filter === 'all' ? 'class="active"' : '' ?>>
+                    All Accounts (<?= $totalUsers ?>)
+                </a>
+                <a href="?action=list&filter=admin" <?= $filter === 'admin' ? 'class="active"' : '' ?>>
+                    Admin (<?= $adminCount ?>)
+                </a>
+                <a href="?action=list&filter=client" <?= $filter === 'client' ? 'class="active"' : '' ?>>
+                    Client - Asset Borrowers (<?= $clientCount ?>)
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stats Container -->
+    <div class="stats-container">
+        <div class="filter-stats">
+            <span>Total Users: <?= $totalUsers ?></span>
+            <span>Admins: <?= $adminCount ?></span>
+            <span>Clients: <?= $clientCount ?></span>
+        </div>
+    </div>
+
     <table>
         <thead>
             <tr>
@@ -205,15 +394,19 @@ if ($action === 'list' || $action === '') {
                 <tr>
                     <td><?= htmlspecialchars($user['full_name']) ?></td>
                     <td><?= htmlspecialchars($user['email']) ?></td>
-                    <td><?= htmlspecialchars($user['role']) ?></td>
+                    <td>
+                        <span style="background: <?= $user['role'] === 'admin' ? '#dc3545' : '#28a745' ?>; color: white; padding: 2px 8px; border-radius: 3px; font-size: 12px;">
+                            <?= $user['role'] === 'admin' ? 'ADMIN' : 'CLIENT' ?>
+                        </span>
+                    </td>
                     <td class="actions">
-                        <a href="?action=edit&id=<?= $user['user_id'] ?>">Edit</a>
-                        <a href="?action=delete&id=<?= $user['user_id'] ?>" style="color:#dc3545;">Delete</a>
+                        <a href="?action=edit&id=<?= $user['user_id'] ?>&filter=<?= $filter ?>">Edit</a>
+                        <a href="?action=delete&id=<?= $user['user_id'] ?>&filter=<?= $filter ?>" style="color:#dc3545;">Delete</a>
                     </td>
                 </tr>
             <?php endforeach; ?>
         <?php else: ?>
-            <tr><td colspan="4">No users found.</td></tr>
+            <tr><td colspan="4">No users found for the selected filter.</td></tr>
         <?php endif; ?>
         </tbody>
     </table>
@@ -238,7 +431,7 @@ if ($action === 'list' || $action === '') {
         <label for="role">Role</label>
         <select id="role" name="role" required>
             <option value="admin" <?= $userData['role'] === 'admin' ? 'selected' : '' ?>>Admin</option>
-            <option value="member" <?= $userData['role'] === 'member' ? 'selected' : '' ?>>Member</option>
+            <option value="member" <?= $userData['role'] === 'member' ? 'selected' : '' ?>>Client (Member)</option>
         </select>
 
         <label for="password">Password <?= $action === 'edit' ? '<small>(leave blank to keep current)</small>' : '' ?></label>
@@ -249,7 +442,7 @@ if ($action === 'list' || $action === '') {
 
         <br><br>
         <button type="submit"><?= $action === 'add' ? 'Add User' : 'Update User' ?></button>
-        <a href="?action=list" class="button" style="background:#777; margin-left:10px;">Cancel</a>
+        <a href="?action=list&filter=<?= $filter ?>" class="button" style="background:#777; margin-left:10px;">Cancel</a>
     </form>
 
 <?php elseif ($action === 'delete'): ?>
@@ -258,12 +451,14 @@ if ($action === 'list' || $action === '') {
     <p>Are you sure you want to delete user <strong><?= htmlspecialchars($userData['full_name']) ?></strong>?</p>
     <form method="post" action="">
         <button type="submit" style="background:#dc3545;">Yes, Delete</button>
-        <a href="?action=list" class="button" style="background:#777; margin-left:10px;">Cancel</a>
+        <a href="?action=list&filter=<?= $filter ?>" class="button" style="background:#777; margin-left:10px;">Cancel</a>
     </form>
 
 <?php else: ?>
     <p>Invalid action specified.</p>
 <?php endif; ?>
+
+</div>
 
 </body>
 </html>

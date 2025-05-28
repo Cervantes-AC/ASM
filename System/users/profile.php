@@ -32,41 +32,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$email, $userId]);
         if ($stmt->fetchColumn() > 0) {
             $error = "Email is already taken by another user.";
-        } else {
-            // Handle password update if fields filled
-            if ($new_password !== '' || $confirm_password !== '') {
-                if ($new_password !== $confirm_password) {
-                    $error = "New passwords do not match.";
-                } elseif (strlen($new_password) < 6) {
-                    $error = "New password must be at least 6 characters.";
-                } else {
-                    // Verify current password before updating
-                    $stmt = $pdo->prepare("SELECT password FROM users WHERE user_id = ?");
-                    $stmt->execute([$userId]);
-                    $hashedPassword = $stmt->fetchColumn();
+        }
+        
+        // Handle password update validation
+        $password_change_requested = !empty($current_password) || !empty($new_password) || !empty($confirm_password);
+        
+        if (!$error && $password_change_requested) {
+            // All password fields must be filled if any password field is filled
+            if (empty($current_password)) {
+                $error = "Current password is required to change password.";
+            } elseif (empty($new_password)) {
+                $error = "New password cannot be empty.";
+            } elseif (empty($confirm_password)) {
+                $error = "Please confirm your new password.";
+            } elseif ($new_password !== $confirm_password) {
+                $error = "New passwords do not match.";
+            } elseif (strlen($new_password) < 6) {
+                $error = "New password must be at least 6 characters.";
+            } else {
+                // Verify current password before updating
+                $stmt = $pdo->prepare("SELECT password FROM users WHERE user_id = ?");
+                $stmt->execute([$userId]);
+                $hashedPassword = $stmt->fetchColumn();
 
-                    if (!password_verify($current_password, $hashedPassword)) {
-                        $error = "Current password is incorrect.";
-                    }
+                if (!password_verify($current_password, $hashedPassword)) {
+                    $error = "Current password is incorrect.";
                 }
             }
+        }
 
-            if (!$error) {
+        // Update user profile if no errors
+        if (!$error) {
+            try {
                 // Update user profile (and password if requested)
-                if ($new_password !== '') {
+                if ($password_change_requested && !$error) {
                     $hashedNewPassword = password_hash($new_password, PASSWORD_DEFAULT);
                     $stmt = $pdo->prepare("UPDATE users SET full_name = ?, email = ?, password = ? WHERE user_id = ?");
-                    $stmt->execute([$full_name, $email, $hashedNewPassword, $userId]);
+                    $result = $stmt->execute([$full_name, $email, $hashedNewPassword, $userId]);
+                    
+                    if ($result) {
+                        $success = "Profile and password updated successfully.";
+                    } else {
+                        $error = "Failed to update profile and password.";
+                    }
                 } else {
                     $stmt = $pdo->prepare("UPDATE users SET full_name = ?, email = ? WHERE user_id = ?");
-                    $stmt->execute([$full_name, $email, $userId]);
+                    $result = $stmt->execute([$full_name, $email, $userId]);
+                    
+                    if ($result) {
+                        $success = "Profile updated successfully.";
+                    } else {
+                        $error = "Failed to update profile.";
+                    }
                 }
 
-                $success = "Profile updated successfully.";
-                // Refresh user data
-                $stmt = $pdo->prepare("SELECT full_name, email FROM users WHERE user_id = ?");
-                $stmt->execute([$userId]);
-                $user = $stmt->fetch();
+                // Refresh user data if update was successful
+                if ($success) {
+                    $stmt = $pdo->prepare("SELECT full_name, email FROM users WHERE user_id = ?");
+                    $stmt->execute([$userId]);
+                    $user = $stmt->fetch();
+                }
+                
+            } catch (Exception $e) {
+                $error = "An error occurred while updating your profile. Please try again.";
+                // Log the actual error for debugging (don't show to user)
+                error_log("Profile update error: " . $e->getMessage());
             }
         }
     }
@@ -162,6 +192,12 @@ include '../../includes/header.php';
     p.back-link a:hover {
         text-decoration: underline;
     }
+    .password-note {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 15px;
+        font-style: italic;
+    }
 </style>
 <center>
 <h2>My Profile</h2>
@@ -182,18 +218,19 @@ include '../../includes/header.php';
     <hr>
 
     <p><strong>Change Password (optional):</strong></p>
+    <p class="password-note">Leave blank if you don't want to change your password</p>
 
     <label for="current_password">Current Password:</label>
-    <input type="password" id="current_password" name="current_password" autocomplete="off">
+    <input type="password" id="current_password" name="current_password" autocomplete="current-password">
 
     <label for="new_password">New Password:</label>
-    <input type="password" id="new_password" name="new_password" autocomplete="off">
+    <input type="password" id="new_password" name="new_password" autocomplete="new-password">
 
     <label for="confirm_password">Confirm New Password:</label>
-    <input type="password" id="confirm_password" name="confirm_password" autocomplete="off">
+    <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password">
 
     <button type="submit">Update Profile</button>
 </form>
 </center>
-</c>
+
 <?php include '../../includes/footer.php'; ?>
