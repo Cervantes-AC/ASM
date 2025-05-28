@@ -1,5 +1,5 @@
 -- DROP TABLES IF EXIST TO AVOID CONFLICTS DURING TESTING
-DROP TABLE IF EXISTS notifications, logs, fines, reservations, returns, borrow_requests, assets, users;
+DROP TABLE IF EXISTS notifications, logs, fines, reservations, returns, borrow_requests, asset_items, assets, users;
 
 -- USERS TABLE
 CREATE TABLE users (
@@ -26,18 +26,55 @@ CREATE TABLE assets (
     date_added DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- BORROW REQUESTS TABLE
+-- ASSET ITEMS TABLE - Track individual items within assets
+CREATE TABLE asset_items (
+    item_id INT AUTO_INCREMENT PRIMARY KEY,
+    asset_id INT NOT NULL,
+    item_number INT NOT NULL,
+    `condition` VARCHAR(100) DEFAULT 'Good',
+    status ENUM('available', 'borrowed', 'maintenance', 'damaged') DEFAULT 'available',
+    borrowed_by INT NULL,
+    borrowed_date DATETIME NULL,
+    return_date DATETIME NULL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    -- Ensure unique combination of asset_id and item_number
+    UNIQUE KEY unique_asset_item (asset_id, item_number),
+    
+    -- Index for better performance
+    INDEX idx_asset_status (asset_id, status),
+    INDEX idx_borrowed_by (borrowed_by),
+    
+    -- Foreign key constraints
+    CONSTRAINT fk_asset_items_asset FOREIGN KEY (asset_id) REFERENCES assets(asset_id) ON DELETE CASCADE,
+    CONSTRAINT fk_asset_items_user FOREIGN KEY (borrowed_by) REFERENCES users(user_id) ON DELETE SET NULL
+);
+
+-- BORROW REQUESTS TABLE (CONSOLIDATED VERSION)
 CREATE TABLE borrow_requests (
     borrow_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     asset_id INT NOT NULL,
-    quantity INT,
-    date_borrowed DATETIME,
-    expected_return DATETIME,
-    status ENUM('pending', 'approved', 'denied', 'returned', 'overdue') DEFAULT 'pending',
+    item_id INT NULL,
+    item_number INT NULL,
+    quantity INT DEFAULT 1,
+    borrow_condition ENUM('excellent', 'good', 'fair', 'poor', 'damaged') NULL,
+    return_condition ENUM('excellent', 'good', 'fair', 'poor', 'damaged') NULL,
+    return_notes TEXT NULL,
+    request_date DATETIME NOT NULL,
+    date_borrowed DATETIME NULL,
+    expected_return DATETIME NULL,
+    return_date DATETIME NULL,
+    status ENUM('pending', 'approved', 'rejected', 'denied', 'returned', 'overdue') DEFAULT 'pending',
+    notes TEXT,
     remarks TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (asset_id) REFERENCES assets(asset_id) ON DELETE CASCADE
+    FOREIGN KEY (asset_id) REFERENCES assets(asset_id) ON DELETE CASCADE,
+    FOREIGN KEY (item_id) REFERENCES asset_items(item_id) ON DELETE SET NULL
 );
 
 -- RETURNS TABLE
@@ -97,6 +134,27 @@ CREATE TABLE notifications (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
+-- ASSET OVERVIEW VIEW - Easy asset overview with item counts
+CREATE OR REPLACE VIEW asset_overview AS
+SELECT 
+    a.asset_id,
+    a.asset_name,
+    a.category,
+    a.serial_code,
+    a.quantity,
+    a.`condition` as main_condition,
+    a.status,
+    a.location,
+    a.date_added,
+    COUNT(ai.item_id) as tracked_items,
+    SUM(CASE WHEN ai.status = 'available' THEN 1 ELSE 0 END) as available_items,
+    SUM(CASE WHEN ai.status = 'borrowed' THEN 1 ELSE 0 END) as borrowed_items,
+    SUM(CASE WHEN ai.status = 'maintenance' THEN 1 ELSE 0 END) as maintenance_items,
+    SUM(CASE WHEN ai.status = 'damaged' THEN 1 ELSE 0 END) as damaged_items
+FROM assets a
+LEFT JOIN asset_items ai ON a.asset_id = ai.asset_id
+GROUP BY a.asset_id, a.asset_name, a.category, a.serial_code, a.quantity, a.`condition`, a.status, a.location, a.date_added;
+
 -- SAMPLE INSERTS
 
 -- USERS
@@ -113,10 +171,33 @@ VALUES
 ('Microphone', 'Audio', 'MIC-005', 5, 'Excellent', 'Room B202'),
 ('Laptop', 'Computer', 'LTP-003', 3, 'Fair', 'Room C303');
 
--- BORROW REQUESTS
-INSERT INTO borrow_requests (user_id, asset_id, quantity, date_borrowed, expected_return, status)
+-- ASSET ITEMS (Sample individual items for tracking)
+INSERT INTO asset_items (asset_id, item_number, `condition`, status) VALUES
+-- Projector items (asset_id = 1, quantity = 2)
+(1, 1, 'Good', 'borrowed'),    -- One projector is borrowed
+(1, 2, 'Good', 'available'),   -- One projector is available
+
+-- Microphone items (asset_id = 2, quantity = 5)
+(2, 1, 'Excellent', 'available'),
+(2, 2, 'Excellent', 'available'),
+(2, 3, 'Excellent', 'available'),
+(2, 4, 'Excellent', 'available'),
+(2, 5, 'Excellent', 'available'),
+
+-- Laptop items (asset_id = 3, quantity = 3)
+(3, 1, 'Fair', 'available'),
+(3, 2, 'Fair', 'available'),
+(3, 3, 'Fair', 'maintenance');  -- One laptop is in maintenance
+
+-- BORROW REQUESTS (Updated with new columns)
+INSERT INTO borrow_requests (user_id, asset_id, item_id, item_number, quantity, borrow_condition, request_date, date_borrowed, expected_return, status)
 VALUES 
-(3, 1, 1, NOW(), DATE_ADD(NOW(), INTERVAL 7 DAY), 'approved');
+(3, 1, 1, 1, 1, 'good', NOW(), NOW(), DATE_ADD(NOW(), INTERVAL 7 DAY), 'approved');
+
+-- Update the asset_items table to reflect the borrowed item
+UPDATE asset_items 
+SET status = 'borrowed', borrowed_by = 3, borrowed_date = NOW() 
+WHERE asset_id = 1 AND item_number = 1;
 
 -- RETURNS
 INSERT INTO returns (borrow_id, return_date, `condition`, remarks)

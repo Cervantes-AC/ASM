@@ -40,7 +40,6 @@ function getIndividualItems($pdo, $asset_id, $quantity) {
     if (count($storedItems) !== $quantity) {
         if (count($storedItems) < $quantity) {
             // Add missing items - use 'good' as default condition for new items
-            // Don't inherit from main asset to avoid condition propagation issues
             $defaultCondition = 'good';
             
             for ($i = count($storedItems) + 1; $i <= $quantity; $i++) {
@@ -59,49 +58,62 @@ function getIndividualItems($pdo, $asset_id, $quantity) {
         $storedItems = $stmt->fetchAll();
     }
     
-    // Update the main asset condition based on individual items
-    // Only call this when we actually need to sync conditions, not on every load
-    updateMainAssetCondition($pdo, $asset_id);
-    
     return $storedItems;
 }
 
-// Function to update main asset condition based on individual items
-function updateMainAssetCondition($pdo, $asset_id) {
-    // Get all conditions from individual items
-    $stmt = $pdo->prepare("SELECT `condition`, COUNT(*) as count FROM asset_items WHERE asset_id = ? GROUP BY `condition` ORDER BY count DESC");
-    $stmt->execute([$asset_id]);
-    $conditions = $stmt->fetchAll();
+// Function to generate a consistent color for a category
+function getCategoryColor($category) {
+    // Generate a hash from the category name to ensure consistent colors
+    $hash = md5($category);
+    // Extract RGB values from the hash
+    $r = hexdec(substr($hash, 0, 2));
+    $g = hexdec(substr($hash, 2, 2));
+    $b = hexdec(substr($hash, 4, 2));
     
-    if (!empty($conditions)) {
-        $mainCondition = 'good'; // Default condition
-        
-        // If there's only one condition type and all items have the same condition
-        if (count($conditions) == 1) {
-            $mainCondition = $conditions[0]['condition'];
-        } else {
-            // If there are mixed conditions, set to 'mixed'
-            $mainCondition = 'mixed';
-        }
-        
-        // Update main asset condition without affecting individual items
-        $updateStmt = $pdo->prepare("UPDATE assets SET `condition` = ? WHERE asset_id = ?");
-        $updateStmt->execute([$mainCondition, $asset_id]);
-    }
+    // Lighten the colors to make them more pastel and readable
+    $r = min(255, $r + 100);
+    $g = min(255, $g + 100);
+    $b = min(255, $b + 100);
+    
+    return "rgb($r, $g, $b)";
 }
 
-// Function to update individual item condition (called via AJAX)
-function updateIndividualItemCondition($pdo, $asset_id, $item_number, $new_condition) {
-    // Update only the specific item's condition
-    $stmt = $pdo->prepare("UPDATE asset_items SET `condition` = ? WHERE asset_id = ? AND item_number = ?");
-    $result = $stmt->execute([$new_condition, $asset_id, $item_number]);
+// Function to get text color based on background (for readability)
+function getTextColor($bgColor) {
+    // Extract RGB values
+    preg_match('/rgb\((\d+), (\d+), (\d+)\)/', $bgColor, $matches);
+    $r = $matches[1];
+    $g = $matches[2];
+    $b = $matches[3];
     
-    if ($result) {
-        // Update the main asset condition to reflect the change
-        updateMainAssetCondition($pdo, $asset_id);
-        return true;
+    // Calculate luminance
+    $luminance = (0.299 * $r + 0.587 * $g + 0.114 * $b) / 255;
+    
+    // Return dark text for light backgrounds, light text for dark backgrounds
+    return $luminance > 0.5 ? '#333' : '#fff';
+}
+
+// Prepare individualized assets array
+$individualizedAssets = [];
+
+foreach ($assets as $asset) {
+    if ($asset['quantity'] > 1 && empty($asset['serial_code'])) {
+        // This asset has multiple quantities, individualize them
+        $individualItems = getIndividualItems($pdo, $asset['asset_id'], $asset['quantity']);
+        foreach ($individualItems as $item) {
+            $individualizedAsset = $asset; // Copy the main asset data
+            $individualizedAsset['item_id'] = $item['item_id'];
+            $individualizedAsset['item_number'] = $item['item_number'];
+            $individualizedAsset['individual_condition'] = $item['condition'];
+            $individualizedAsset['individual_status'] = $item['status'];
+            $individualizedAsset['is_individual'] = true;
+            $individualizedAssets[] = $individualizedAsset;
+        }
+    } else {
+        // Single quantity asset, add as is
+        $asset['is_individual'] = false;
+        $individualizedAssets[] = $asset;
     }
-    return false;
 }
 
 include '../../includes/header.php';
@@ -198,59 +210,12 @@ include '../../includes/header.php';
         background-color: #007f6d;
     }
 
-    .expandable-category {
-        cursor: pointer;
-        color: #009879;
-        font-weight: bold;
-        text-decoration: underline;
-        position: relative;
-    }
-
-    .expandable-category:hover {
-        color: #007f6d;
-    }
-
-    .expandable-category::after {
-        content: " ▼";
-        font-size: 0.8em;
-        color: #666;
-    }
-
-    .expandable-category.expanded::after {
-        content: " ▲";
-    }
-
-    .detail-row {
-        display: none;
-        background-color: #f8f9fa;
-    }
-
-    .detail-row.show {
-        display: table-row;
-    }
-
-    .detail-row td {
-        padding-left: 30px;
-        border-left: 3px solid #009879;
-        font-size: 0.9em;
-        color: #666;
-    }
-
-    .detail-table {
-        width: 100%;
-        margin: 10px 0;
-    }
-
-    .detail-table th,
-    .detail-table td {
+    .category-cell {
         padding: 8px 12px;
-        border: 1px solid #ddd;
-        text-align: left;
-    }
-
-    .detail-table th {
-        background-color: #e9ecef;
+        border-radius: 4px;
         font-weight: bold;
+        text-align: center;
+        min-width: 120px;
     }
 
     .item-status-available {
@@ -303,13 +268,6 @@ include '../../includes/header.php';
         font-weight: bold;
     }
 
-    .condition-select {
-        padding: 4px 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 0.9em;
-    }
-
     h2 {
         margin-top: 20px;
     }
@@ -322,52 +280,38 @@ include '../../includes/header.php';
         border-radius: 4px;
         margin-bottom: 20px;
     }
+
+    .category-legend {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .category-legend h4 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: #495057;
+    }
+
+    .legend-item {
+        display: inline-block;
+        margin: 5px 10px 5px 0;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-weight: bold;
+        font-size: 0.9em;
+    }
+
+    .individual-item-row {
+        background-color: #f8f9fa;
+    }
+
+    .individual-item-row:hover {
+        background-color: #e9ecef !important;
+    }
 </style>
-
-<script>
-function toggleDetails(assetId) {
-    const detailRows = document.querySelectorAll('.detail-row-' + assetId);
-    const categoryCell = document.querySelector('.expandable-' + assetId);
-    
-    detailRows.forEach(row => {
-        if (row.classList.contains('show')) {
-            row.classList.remove('show');
-            categoryCell.classList.remove('expanded');
-        } else {
-            row.classList.add('show');
-            categoryCell.classList.add('expanded');
-        }
-    });
-}
-
-function updateItemCondition(assetId, itemNumber, newCondition) {
-    // Send AJAX request to update individual item condition
-    fetch('update_item_condition.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            asset_id: assetId,
-            item_number: itemNumber,
-            condition: newCondition
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Refresh the page to show updated conditions
-            location.reload();
-        } else {
-            alert('Error updating condition: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error updating condition');
-    });
-}
-</script>
 
 <h2>Assets List</h2>
 
@@ -388,6 +332,26 @@ if ($zeroQtyCount > 0): ?>
     </div>
 <?php endif; ?>
 
+<?php
+// Create category legend for multi-quantity assets
+$categories = [];
+foreach ($assets as $asset) {
+    if ($asset['quantity'] > 1 && empty($asset['serial_code'])) {
+        $categories[$asset['category']] = getCategoryColor($asset['category']);
+    }
+}
+
+if (!empty($categories)): ?>
+    <div class="category-legend">
+        <h4>Category Color Legend (Multi-quantity Assets):</h4>
+        <?php foreach ($categories as $category => $color): ?>
+            <span class="legend-item" style="background-color: <?= $color ?>; color: <?= getTextColor($color) ?>;">
+                <?= htmlspecialchars($category) ?>
+            </span>
+        <?php endforeach; ?>
+    </div>
+<?php endif; ?>
+
 <div class="table-container">
     <table class="styled-table">
         <thead>
@@ -395,8 +359,9 @@ if ($zeroQtyCount > 0): ?>
                 <th>Asset Name</th>
                 <th>Category</th>
                 <th>Serial Code</th>
-                <th>Quantity</th>
+                <th>Item #</th>
                 <th>Condition</th>
+                <th>Status</th>
                 <th>Date Added</th>
                 <?php if ($userRole === 'admin' || $userRole === 'staff' || $userRole === 'member'): ?>
                     <th>Actions</th>
@@ -404,36 +369,88 @@ if ($zeroQtyCount > 0): ?>
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($assets as $asset): ?>
-                <tr>
-                    <td><?= htmlspecialchars($asset['asset_name']) ?></td>
+            <?php foreach ($individualizedAssets as $asset): ?>
+                <tr <?= $asset['is_individual'] ? 'class="individual-item-row"' : '' ?>>
                     <td>
-                        <?php if ($asset['quantity'] > 1 && empty($asset['serial_code'])): ?>
-                            <span class="expandable-category expandable-<?= $asset['asset_id'] ?>" 
-                                  onclick="toggleDetails(<?= $asset['asset_id'] ?>)">
+                        <?php if ($asset['is_individual']): ?>
+                            <?= htmlspecialchars($asset['asset_name']) ?> #<?= $asset['item_number'] ?>
+                        <?php else: ?>
+                            <?= htmlspecialchars($asset['asset_name']) ?>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php if ($asset['is_individual']): ?>
+                            <?php 
+                            $categoryColor = getCategoryColor($asset['category']);
+                            $textColor = getTextColor($categoryColor);
+                            ?>
+                            <span class="category-cell" style="background-color: <?= $categoryColor ?>; color: <?= $textColor ?>;">
                                 <?= htmlspecialchars($asset['category']) ?>
                             </span>
                         <?php else: ?>
                             <?= htmlspecialchars($asset['category']) ?>
                         <?php endif; ?>
                     </td>
-                    <td><?= htmlspecialchars($asset['serial_code']) ?: '-' ?></td>
-                    <td><?= (int)$asset['quantity'] ?></td>
                     <td>
-                        <span class="condition-<?= $asset['condition'] ?>">
-                            <?= ucfirst(htmlspecialchars($asset['condition'])) ?>
-                        </span>
+                        <?php if ($asset['is_individual']): ?>
+                            -
+                        <?php else: ?>
+                            <?= htmlspecialchars($asset['serial_code']) ?: '-' ?>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php if ($asset['is_individual']): ?>
+                            #<?= $asset['item_number'] ?>
+                        <?php else: ?>
+                            Single Item
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php if ($asset['is_individual']): ?>
+                            <span class="condition-<?= $asset['individual_condition'] ?>">
+                                <?= ucfirst(htmlspecialchars($asset['individual_condition'])) ?>
+                            </span>
+                        <?php else: ?>
+                            <span class="condition-<?= $asset['condition'] ?>">
+                                <?= ucfirst(htmlspecialchars($asset['condition'])) ?>
+                            </span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php if ($asset['is_individual']): ?>
+                            <span class="item-status-<?= $asset['individual_status'] ?>">
+                                <?= ucfirst($asset['individual_status']) ?>
+                            </span>
+                        <?php else: ?>
+                            <span class="item-status-<?= $asset['status'] ?>">
+                                <?= ucfirst($asset['status']) ?>
+                            </span>
+                        <?php endif; ?>
                     </td>
                     <td><?= htmlspecialchars($asset['date_added']) ?></td>
                     <?php if ($userRole === 'admin' || $userRole === 'staff'): ?>
                         <td>
-                            <a href="edit.php?id=<?= $asset['asset_id'] ?>" class="action-link">Edit</a>
-                            <a href="delete.php?id=<?= $asset['asset_id'] ?>" class="action-link danger" onclick="return confirm('Delete this asset?');">Delete</a>
+                            <?php if ($asset['is_individual']): ?>
+                                 <a href="edit.php?id=<?= $asset['asset_id'] ?>" class="action-link">Edit</a>
+                                <a href="delete.php?id=<?= $asset['asset_id'] ?>" class="action-link danger" onclick="return confirm('Delete this asset?');">Delete</a>
+                            <?php else: ?>
+                                <a href="edit.php?id=<?= $asset['asset_id'] ?>" class="action-link">Edit</a>
+                                <a href="delete.php?id=<?= $asset['asset_id'] ?>" class="action-link danger" onclick="return confirm('Delete this asset?');">Delete</a>
+                            <?php endif; ?>
                         </td>
                     <?php elseif ($userRole === 'member'): ?>
                         <td>
-                            <?php if ($asset['status'] === 'available' && $asset['quantity'] > 0): ?>
-                                <a href="../borrow/request.php?asset_id=<?= $asset['asset_id'] ?>" class="action-link">Request to Borrow</a>
+                            <?php 
+                            $itemAvailable = $asset['is_individual'] ? 
+                                ($asset['individual_status'] === 'available') : 
+                                ($asset['status'] === 'available' && $asset['quantity'] > 0);
+                            ?>
+                            <?php if ($itemAvailable): ?>
+                                <?php if ($asset['is_individual']): ?>
+                                    <a href="../borrow/request.php?asset_id=<?= $asset['asset_id'] ?>&item_number=<?= $asset['item_number'] ?>" class="action-link">Request to Borrow</a>
+                                <?php else: ?>
+                                    <a href="../borrow/request.php?asset_id=<?= $asset['asset_id'] ?>" class="action-link">Request to Borrow</a>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <span class="unavailable">Not Available</span>
                             <?php endif; ?>
@@ -442,58 +459,9 @@ if ($zeroQtyCount > 0): ?>
                         <td>-</td>
                     <?php endif; ?>
                 </tr>
-                
-                <?php if ($asset['quantity'] > 1 && empty($asset['serial_code'])): ?>
-                    <tr class="detail-row detail-row-<?= $asset['asset_id'] ?>">
-                        <td colspan="<?= ($userRole === 'admin' || $userRole === 'staff' || $userRole === 'member') ? '7' : '6' ?>">
-                            <strong>Individual Items for "<?= htmlspecialchars($asset['asset_name']) ?>":</strong>
-                            <table class="detail-table">
-                                <thead>
-                                    <tr>
-                                        <th>Item #</th>
-                                        <th>Condition</th>
-                                        <th>Status</th>
-                                        <?php if ($userRole === 'member'): ?>
-                                            <th>Action</th>
-                                        <?php endif; ?>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php 
-                                    $individualItems = getIndividualItems($pdo, $asset['asset_id'], $asset['quantity']);
-                                    foreach ($individualItems as $item): 
-                                    ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($asset['asset_name']) ?> #<?= $item['item_number'] ?></td>
-                                            <td>
-                                                <span class="condition-<?= $item['condition'] ?>">
-                                                    <?= ucfirst($item['condition']) ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span class="item-status-<?= $item['status'] ?>">
-                                                    <?= ucfirst($item['status']) ?>
-                                                </span>
-                                            </td>
-                                            <?php if ($userRole === 'member'): ?>
-                                                <td>
-                                                    <?php if ($item['status'] === 'available'): ?>
-                                                        <a href="../borrow/request.php?asset_id=<?= $asset['asset_id'] ?>&item_number=<?= $item['item_number'] ?>" class="action-link">Borrow This Item</a>
-                                                    <?php else: ?>
-                                                        <span class="unavailable">Not Available</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                            <?php endif; ?>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                <?php endif; ?>
             <?php endforeach; ?>
-            <?php if (empty($assets)): ?>
-                <tr><td colspan="7">No assets with available quantity found.</td></tr>
+            <?php if (empty($individualizedAssets)): ?>
+                <tr><td colspan="8">No assets with available quantity found.</td></tr>
             <?php endif; ?>
         </tbody>
     </table>

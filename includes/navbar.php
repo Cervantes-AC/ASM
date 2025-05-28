@@ -95,7 +95,6 @@ $isLoggedIn = isset($_SESSION['user_id']);
                 <li><a href="/ASM/System/users/list.php">Manage Users</a></li>
             <?php endif; ?>
 
-            <li><a href="/ASM/System/users/profile.php">Profile</a></li>
             <li><a href="/ASM/System/auth/logout.php">Logout</a></li>
 
         <?php else: ?>

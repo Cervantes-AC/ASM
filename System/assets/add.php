@@ -105,21 +105,15 @@ include '../../includes/header.php';
 
     <label>Serial Code:<br>
         <input type="text" name="serial_code" id="serial_code" value="<?= htmlspecialchars($serial_code) ?>" onchange="toggleQuantityField()">
-        <small style="color: #666; display: block;">If provided, quantity will be automatically set to 1</small>
+        <small style="color: #666; display: block;">If there is no SERIAL CODE, please provide an ID</small>    
     </label><br><br>
 
-    <div id="quantity_field">
-        <label>Quantity:<br>
-            <input type="number" name="quantity" id="quantity" min="1" value="<?= htmlspecialchars($quantity) ?>" required>
-        </label><br><br>
-    </div>
 
     <label>Condition:<br>
         <input type="radio" name="condition" value="Excellent" <?= ($condition === 'Excellent') ? 'checked' : '' ?> required> Excellent<br>
         <input type="radio" name="condition" value="Good" <?= ($condition === 'Good') ? 'checked' : '' ?> required> Good<br>
         <input type="radio" name="condition" value="Fair" <?= ($condition === 'Fair') ? 'checked' : '' ?> required> Fair<br>
         <input type="radio" name="condition" value="Fair" <?= ($condition === 'Poor') ? 'checked' : '' ?> required> Poor<br>
-        <input type="radio" name="condition" value="Fair" <?= ($condition === 'Damaged') ? 'checked' : '' ?> required> Damaged<br>
     </label><br><br>
 
     <button type="submit">Add Asset</button>

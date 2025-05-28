@@ -139,6 +139,8 @@ include '../../includes/header.php';
         <input type="radio" name="condition" value="Excellent" <?= ($condition === 'Excellent') ? 'checked' : '' ?> required> Excellent<br>
         <input type="radio" name="condition" value="Good" <?= ($condition === 'Good') ? 'checked' : '' ?> required> Good<br>
         <input type="radio" name="condition" value="Fair" <?= ($condition === 'Fair') ? 'checked' : '' ?> required> Fair<br>
+        <input type="radio" name="condition" value="Fair" <?= ($condition === 'Fair') ? 'checked' : '' ?> required> Poor<br>
+        <input type="radio" name="condition" value="Fair" <?= ($condition === 'Fair') ? 'checked' : '' ?> required> Damaged<br>
     </label><br><br>
 
     <button type="submit">Update Asset</button>
