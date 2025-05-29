@@ -7,7 +7,19 @@ $isLoggedIn = isset($_SESSION['user_id']);
 ?>
 
 <style>
+    /* Reset any default margins/padding that might interfere */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
     nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
         background-color: #007bff;
         padding: 0.5rem 1.5rem;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
@@ -15,6 +27,22 @@ $isLoggedIn = isset($_SESSION['user_id']);
         align-items: center;
         justify-content: space-between;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        z-index: 1000; /* Ensures navbar stays above other content */
+    }
+
+    /* Add padding to body to prevent content from hiding behind fixed navbar */
+    body {
+        padding-top: 70px; /* Adjust this value based on your navbar height */
+        padding-left: 2rem;
+        padding-right: 2rem;
+        margin: 0;
+    }
+
+    /* Additional spacing for main content areas */
+    main, .container, .content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1rem;
     }
 
     nav .logo {
@@ -25,6 +53,7 @@ $isLoggedIn = isset($_SESSION['user_id']);
         font-weight: 700;
         font-size: 1.3rem;
         user-select: none;
+        text-decoration: none; /* Remove underline from logo link */
     }
 
     nav .logo img {
@@ -65,11 +94,18 @@ $isLoggedIn = isset($_SESSION['user_id']);
         nav {
             flex-direction: column;
             align-items: flex-start;
+            padding: 0.5rem 1rem;
         }
         nav ul {
             flex-wrap: wrap;
             gap: 0.7rem;
             margin-top: 0.5rem;
+        }
+        /* Increase body padding for mobile when navbar becomes taller */
+        body {
+            padding-top: 90px;
+            padding-left: 1rem;
+            padding-right: 1rem;
         }
     }
 </style>

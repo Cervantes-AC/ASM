@@ -78,19 +78,40 @@ function getCategoryColor($category) {
     return "rgb($r, $g, $b)";
 }
 
+// Function to generate a lighter background color for asset names
+function getCategoryBackgroundColor($category) {
+    // Generate a hash from the category name to ensure consistent colors
+    $hash = md5($category);
+    // Extract RGB values from the hash
+    $r = hexdec(substr($hash, 0, 2));
+    $g = hexdec(substr($hash, 2, 2));
+    $b = hexdec(substr($hash, 4, 2));
+    
+    // Make colors much lighter for background use (add more to make it pastel)
+    $r = min(255, $r + 150);
+    $g = min(255, $g + 150);
+    $b = min(255, $b + 150);
+    
+    // Add some transparency for subtle effect
+    return "rgba($r, $g, $b, 0.3)";
+}
+
 // Function to get text color based on background (for readability)
 function getTextColor($bgColor) {
     // Extract RGB values
-    preg_match('/rgb\((\d+), (\d+), (\d+)\)/', $bgColor, $matches);
-    $r = $matches[1];
-    $g = $matches[2];
-    $b = $matches[3];
+    if (preg_match('/rgba?\((\d+), (\d+), (\d+)/', $bgColor, $matches)) {
+        $r = $matches[1];
+        $g = $matches[2];
+        $b = $matches[3];
+        
+        // Calculate luminance
+        $luminance = (0.299 * $r + 0.587 * $g + 0.114 * $b) / 255;
+        
+        // Return dark text for light backgrounds, light text for dark backgrounds
+        return $luminance > 0.5 ? '#333' : '#fff';
+    }
     
-    // Calculate luminance
-    $luminance = (0.299 * $r + 0.587 * $g + 0.114 * $b) / 255;
-    
-    // Return dark text for light backgrounds, light text for dark backgrounds
-    return $luminance > 0.5 ? '#333' : '#fff';
+    return '#333'; // Default to dark text
 }
 
 // Prepare individualized assets array
@@ -218,6 +239,20 @@ include '../../includes/header.php';
         min-width: 120px;
     }
 
+    /* New styles for category-colored asset names */
+    .asset-name-cell {
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        border-left: 4px solid;
+        transition: all 0.2s ease;
+    }
+
+    .asset-name-cell:hover {
+        transform: translateX(2px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
     .item-status-available {
         color: #28a745;
         font-weight: bold;
@@ -311,6 +346,65 @@ include '../../includes/header.php';
     .individual-item-row:hover {
         background-color: #e9ecef !important;
     }
+
+    /* Filter section styles */
+    .filter-section {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .filter-section h4 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: #495057;
+    }
+
+    .filter-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .filter-btn {
+        padding: 6px 12px;
+        border: 2px solid transparent;
+        border-radius: 4px;
+        font-weight: bold;
+        font-size: 0.9em;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .filter-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filter-btn.active {
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    }
+
+    .clear-filter-btn {
+        background-color: #6c757d;
+        color: white;
+        padding: 6px 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 0.9em;
+    }
+
+    .clear-filter-btn:hover {
+        background-color: #5a6268;
+    }
 </style>
 
 <h2>Assets List</h2>
@@ -333,18 +427,40 @@ if ($zeroQtyCount > 0): ?>
 <?php endif; ?>
 
 <?php
-// Create category legend for multi-quantity assets
-$categories = [];
+// Create category arrays for legends and filters
+$allCategories = [];
 foreach ($assets as $asset) {
-    if ($asset['quantity'] > 1 && empty($asset['serial_code'])) {
-        $categories[$asset['category']] = getCategoryColor($asset['category']);
-    }
+    $allCategories[$asset['category']] = getCategoryColor($asset['category']);
 }
 
-if (!empty($categories)): ?>
+// Separate categories for multi-quantity assets
+$multiQtyCategories = [];
+foreach ($assets as $asset) {
+    if ($asset['quantity'] > 1 && empty($asset['serial_code'])) {
+        $multiQtyCategories[$asset['category']] = getCategoryColor($asset['category']);
+    }
+}
+?>
+
+<!-- Category Filter Section -->
+<div class="filter-section">
+    <h4>Filter by Category:</h4>
+    <div class="filter-buttons">
+        <button class="clear-filter-btn" onclick="clearCategoryFilter()">Show All</button>
+        <?php foreach ($allCategories as $category => $color): ?>
+            <a href="#" class="filter-btn" 
+               style="background-color: <?= getCategoryBackgroundColor($category) ?>; color: <?= getTextColor(getCategoryBackgroundColor($category)) ?>; border-left: 4px solid <?= $color ?>;"
+               onclick="filterByCategory('<?= htmlspecialchars($category, ENT_QUOTES) ?>', this); return false;">
+                <?= htmlspecialchars($category) ?>
+            </a>
+        <?php endforeach; ?>
+    </div>
+</div>
+
+<?php if (!empty($multiQtyCategories)): ?>
     <div class="category-legend">
         <h4>Category Color Legend (Multi-quantity Assets):</h4>
-        <?php foreach ($categories as $category => $color): ?>
+        <?php foreach ($multiQtyCategories as $category => $color): ?>
             <span class="legend-item" style="background-color: <?= $color ?>; color: <?= getTextColor($color) ?>;">
                 <?= htmlspecialchars($category) ?>
             </span>
@@ -370,13 +486,21 @@ if (!empty($categories)): ?>
         </thead>
         <tbody>
             <?php foreach ($individualizedAssets as $asset): ?>
-                <tr <?= $asset['is_individual'] ? 'class="individual-item-row"' : '' ?>>
+                <tr <?= $asset['is_individual'] ? 'class="individual-item-row"' : '' ?> data-category="<?= htmlspecialchars($asset['category']) ?>">
                     <td>
-                        <?php if ($asset['is_individual']): ?>
-                            <?= htmlspecialchars($asset['asset_name']) ?> #<?= $asset['item_number'] ?>
-                        <?php else: ?>
-                            <?= htmlspecialchars($asset['asset_name']) ?>
-                        <?php endif; ?>
+                        <?php 
+                        $categoryBgColor = getCategoryBackgroundColor($asset['category']);
+                        $categoryMainColor = getCategoryColor($asset['category']);
+                        $textColor = getTextColor($categoryBgColor);
+                        ?>
+                        <div class="asset-name-cell" 
+                             style="background-color: <?= $categoryBgColor ?>; color: <?= $textColor ?>; border-left-color: <?= $categoryMainColor ?>;">
+                            <?php if ($asset['is_individual']): ?>
+                                <?= htmlspecialchars($asset['asset_name']) ?> #<?= $asset['item_number'] ?>
+                            <?php else: ?>
+                                <?= htmlspecialchars($asset['asset_name']) ?>
+                            <?php endif; ?>
+                        </div>
                     </td>
                     <td>
                         <?php if ($asset['is_individual']): ?>
@@ -466,5 +590,42 @@ if (!empty($categories)): ?>
         </tbody>
     </table>
 </div>
+
+<script>
+function filterByCategory(category, element) {
+    // Remove active class from all filter buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Add active class to clicked button
+    element.classList.add('active');
+    
+    // Get all table rows (excluding header)
+    const rows = document.querySelectorAll('.styled-table tbody tr');
+    
+    rows.forEach(row => {
+        const rowCategory = row.getAttribute('data-category');
+        if (rowCategory === category) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function clearCategoryFilter() {
+    // Remove active class from all filter buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show all rows
+    const rows = document.querySelectorAll('.styled-table tbody tr');
+    rows.forEach(row => {
+        row.style.display = '';
+    });
+}
+</script>
 
 <?php include '../../includes/footer.php'; ?>
